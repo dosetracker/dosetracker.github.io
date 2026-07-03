@@ -314,8 +314,6 @@
       overflow-wrap: anywhere;
       line-height: 1.15;
     }
-    /* Dosed within the last hour: tint the timer so "recent" stands out */
-    .meta .last.recent { color: var(--accent-strong); }
     .meta .total {
       font-size: 14px; font-weight: 550; color: var(--muted);
       font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
@@ -524,6 +522,11 @@
       box-shadow: var(--shadow);
       display: none; gap: 12px; align-items: center; z-index: 1000;
       font-size: 14px; font-weight: 500;
+      /* A fixed element anchored at left:50% only gets half the screen's
+         width to lay itself out in, which made even short messages wrap.
+         max-content sizes the toast to its text instead; max-width still
+         caps very long messages. */
+      width: max-content;
       max-width: min(92vw, 420px);
     }
     .snackbar.show { display: inline-flex; animation: toast-in var(--t-med) var(--ease); }
@@ -1978,10 +1981,7 @@
       state.drugs.forEach(d => {
         const el = document.getElementById(`last-${d.id}`);
         if (!el) return;
-        const last = lastDoseDate(d.id);
-        el.textContent = formatSinceLabel(last);
-        // Tint the timer while the last dose is under an hour old
-        el.classList.toggle('recent', !!last && !isNaN(last) && (Date.now() - last) < 3600000);
+        el.textContent = formatSinceLabel(lastDoseDate(d.id));
       });
     }
 

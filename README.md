@@ -16,7 +16,7 @@
 
 ## What it does
 
-DoseTracker helps you keep track of **what you've taken, how much, and — most importantly — how long ago**. Each substance gets a card with a running "time since last dose" front and center, so pacing yourself takes one glance instead of guesswork.
+DoseTracker helps you keep track of **what you've taken, how much, and — most importantly — how long ago**. Each substance gets a card with a running "time since last dose" front and center.
 
 - ⏱️ **Time since last dose** is the headline number on every card
 - ➕ Log a dose in two taps; **"Repeat Last Dose"** for one
@@ -30,7 +30,7 @@ DoseTracker helps you keep track of **what you've taken, how much, and — most 
 
 ## Private by design
 
-Your data would be nobody's business but yours — so the app is built so that it *can't* be anyone else's:
+Your data is nobody's business but yours:
 
 - **No server, no account, no analytics.** Everything lives in your browser's local storage, on your device. Nothing is ever uploaded.
 - **No history hoarding.** The app encourages clearing the log after each night; deletions take effect immediately (with a brief Undo).
@@ -49,8 +49,6 @@ Once installed it launches fullscreen from your home screen and works with no in
 
 ## Tech
 
-Deliberately boring, in the best way:
-
 - A single `index.html` — vanilla HTML, CSS, and JavaScript
 - No framework, no build step, no dependencies, no CDN calls
 - A small service worker (`sw.js`) for offline caching
@@ -58,4 +56,4 @@ Deliberately boring, in the best way:
 
 ## Disclaimer
 
-DoseTracker is a logging tool, not medical advice. It doesn't judge, warn, or recommend doses — it just helps you remember. If you or someone near you feels seriously unwell, contact emergency services. Honest information about what was taken helps medics act fast (your shared log can do the talking).
+DoseTracker is a logging tool, not medical advice. It doesn't judge, warn, or recommend doses; it just helps you remember. If you or someone near you feels seriously unwell, contact emergency services. Honest information about what was taken helps medics act fast.
