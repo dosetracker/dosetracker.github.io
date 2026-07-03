@@ -6,13 +6,16 @@
    is served from that cache first — instantly, and with no internet needed.
 
    HOW TO SHIP AN UPDATE:
-   Whenever you change index.html (or any other file), bump CACHE_VERSION
-   below (v1 -> v2 -> v3 ...). Browsers re-read this file on each visit;
-   a changed version creates a fresh cache and deletes the old one, so
-   nobody gets stuck on stale code.
+   Whenever you change index.html (or any other file), set CACHE_VERSION
+   below to today's date, adding a letter for repeat deploys on the same
+   day ('2026-07-03a' -> '2026-07-03b' -> '2026-07-04a' ...). This is an
+   internal cache label, not a public version number — the only thing that
+   matters is that the string CHANGES on every deploy. Browsers re-read
+   this file on each visit; a changed label creates a fresh cache and
+   deletes the old one, so nobody gets stuck on stale code.
    ============================================================================= */
 
-const CACHE_VERSION = 'v18-dosetracker';
+const CACHE_VERSION = '2026-07-03a';
 const CACHE_NAME = `med-tracker-${CACHE_VERSION}`;
 
 // Files the app cannot run without. If any of these fail to download,
