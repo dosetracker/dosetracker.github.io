@@ -1,0 +1,2373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <!-- viewport-fit=cover lets the app draw edge-to-edge on iPhones with a notch -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>DoseTracker</title>
+  <meta name="description" content="Track doses and timing easily on any device. Private — all data stays on your phone.">
+  <meta property="og:title" content="DoseTracker">
+
+  <!-- Tell the browser this is a dark app so built-in controls render dark too -->
+  <meta name="color-scheme" content="dark">
+  <!-- Colour of the browser/status-bar chrome; must match --bg below -->
+  <meta name="theme-color" content="#0f1216">
+
+  <!-- ===== PWA wiring ===== -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+
+  <!-- iOS-specific: launch fullscreen from the home screen, dark status bar -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DoseTracker">
+  <link rel="apple-touch-icon" href="./apple-touch-icon-180.png">
+
+  <style>
+    /* =====================================================================
+       THEME — every colour and size lives here. Change these variables to
+       retheme the whole app from one place.
+       ===================================================================== */
+    :root {
+      /* Surfaces (darkest → lightest) */
+      --bg: #0f1216;            /* page background — keep in sync with theme-color meta + manifest */
+      --surface: #171b22;       /* cards, log panel */
+      --surface-2: #1d222b;     /* slightly raised areas inside cards */
+      --surface-3: #232a35;     /* menus, modals, snackbar */
+
+      /* Lines */
+      --border: rgba(255,255,255,0.07);
+      --border-strong: rgba(255,255,255,0.16);
+
+      /* Text */
+      --text: #e9ecf2;
+      --muted: #a6aebd;
+      --faint: #788090;
+
+      /* Accent — calm teal. Used sparingly: primary actions + focus rings. */
+      --accent: #56c1ab;
+      --accent-strong: #74dcc6;
+      --accent-soft: rgba(86,193,171,0.13);
+      --accent-border: rgba(86,193,171,0.35);
+      --accent-ring: rgba(86,193,171,0.30);
+      --on-accent: #0c1f1a;   /* text on top of accent-filled buttons */
+
+      /* Status colours */
+      --ok: #5cc98f;
+      --ok-soft: rgba(92,201,143,0.14);
+      --ok-border: rgba(92,201,143,0.35);
+      --danger: #ef6e66;
+      --danger-soft: rgba(239,110,102,0.12);
+      --danger-border: rgba(239,110,102,0.38);
+
+      /* Shape & depth */
+      --radius: 18px;
+      --radius-sm: 12px;
+      --shadow: 0 10px 28px rgba(0,0,0,0.35);
+      --shadow-soft: 0 2px 10px rgba(0,0,0,0.22);
+
+      /* Motion — one place to tune all animation speed */
+      --ease: cubic-bezier(0.32, 0.72, 0.25, 1);
+      --t-fast: 0.15s;
+      --t-med: 0.28s;
+
+      /* iPhone safe areas (notch / home indicator) */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+      /* Minimum comfortable touch height */
+      --control-h: 46px;
+
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    html { -webkit-text-size-adjust: 100%; }
+    /* 16px inputs prevent iOS Safari from zooming in when a field is focused */
+    input, select, textarea, .edit-input { font-size: 16px; }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+                   "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      /* Two very faint glows keep the dark background from feeling flat.
+         The first one follows the chosen accent color. */
+      background:
+        radial-gradient(900px 520px at 15% -10%, color-mix(in srgb, var(--accent) 8%, transparent) 0, transparent 60%),
+        radial-gradient(700px 420px at 90% -5%, rgba(120,140,200,0.05) 0, transparent 60%),
+        var(--bg);
+      background-attachment: fixed;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      /* Top/bottom padding respects the iPhone notch & home indicator */
+      padding: calc(28px + var(--safe-top)) 20px calc(96px + var(--safe-bottom));
+      position: relative;
+    }
+
+    /* ===== Header ===== */
+    header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+
+    /* The icon tile: same gradient as the real app icon, lifted off the page
+       with a border, a drop shadow and a faint teal glow. */
+    .app-emblem {
+      flex-shrink: 0;
+      width: 54px; height: 54px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #232b36 0%, #11151b 100%);
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45),
+                  0 0 26px color-mix(in srgb, var(--accent) 18%, transparent);
+      display: grid; place-items: center;
+    }
+    .app-emblem svg { width: 42px; height: 42px; display: block; }
+
+    header h1 {
+      font-size: clamp(24px, 3vw, 30px);
+      margin: 0 0 3px;
+      letter-spacing: -0.02em;
+      font-weight: 750;
+      /* Gentle top-to-bottom fade so the title feels less flat */
+      background: linear-gradient(180deg, #f7f9fd 25%, #b6c0d2 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+    header p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+    @media (max-width: 720px) {
+      header { gap: 12px; }
+      .app-emblem { width: 48px; height: 48px; border-radius: 12px; }
+      .app-emblem svg { width: 37px; height: 37px; }
+    }
+
+    /* ===== Toolbar ===== */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .toolbar-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Shared button language: same radius, border, type and press feedback
+       for every button in the app. */
+    .toolbar button, .btn, .btn-sm, .add-btn, .controls button, .color-select-btn {
+      font-family: inherit;
+      font-weight: 600;
+      border-radius: 999px; /* pill shape — friendlier, more app-like */
+      border: 1px solid var(--border-strong);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+      transition: background var(--t-fast) var(--ease),
+                  border-color var(--t-fast) var(--ease),
+                  transform var(--t-fast) var(--ease);
+    }
+    .toolbar button { padding: 0 16px; min-height: var(--control-h); font-size: 14px; }
+    .toolbar button:hover, .btn:hover, .btn-sm:hover, .controls button:hover, .color-select-btn:hover {
+      background: var(--surface-3);
+    }
+    .toolbar button:active, .btn:active, .btn-sm:active, .add-btn:active,
+    .controls button:active, .color-select-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* Primary action: the one solid, filled button on screen.
+       A slight top-to-bottom shine + soft glow make it feel like the
+       "main" button without shouting. */
+    #add-med {
+      background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
+      border-color: transparent;
+      color: var(--on-accent);
+      font-weight: 700;
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+    #add-med:hover {
+      background: var(--accent-strong);
+      box-shadow: 0 4px 20px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
+    /* ===== Page footer (rarely-used actions) ===== */
+    .page-footer {
+      margin-top: 28px;
+      display: flex; justify-content: center; align-items: center; gap: 12px;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      background: transparent; border: none; padding: 10px 6px;
+      color: var(--faint); font-family: inherit; font-size: 13px; font-weight: 500;
+      text-decoration: underline; text-underline-offset: 3px;
+      cursor: pointer; border-radius: 8px;
+    }
+    .footer-link:hover { color: var(--muted); }
+    .footer-link-danger:hover { color: var(--danger); }
+    .footer-sep { color: var(--faint); font-size: 13px; }
+
+    /* Visible keyboard-focus ring everywhere */
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* ===== Drug card grid ===== */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+    .grid-empty {
+      grid-column: 1 / -1;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      padding: 36px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .grid-empty strong { color: var(--text); }
+
+    /* ===== Card ===== */
+    .card {
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* keeps the colour strip inside the rounded corners */
+    }
+
+    /* Per-drug colour, shown as a slim accent line along the top */
+    .color-strip {
+      position: absolute; inset: 0 0 auto 0; height: 3px;
+      opacity: 0.9;
+    }
+
+    .card-header {
+      padding: 16px 16px 14px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .card-top-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+
+    /* Drug title — the most prominent text on the card.
+       (Deliberately NOT called "name" anywhere: iOS sees fields labelled
+       "name" as contact forms and offers to AutoFill your personal details.) */
+    input.drug-title {
+      font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+      padding: 4px 6px; margin: 0 0 0 -6px; flex: 1; min-width: 0;
+      background: transparent; border: none; color: var(--text);
+      font-family: inherit; border-radius: 8px;
+    }
+    input.drug-title:focus {
+      outline: none;
+      background: var(--surface-3);
+      box-shadow: 0 0 0 3px var(--accent-ring);
+    }
+    input.drug-title.invalid { color: var(--danger); }
+    .name-error { color: var(--danger); font-size: 12px; margin: 0; display: none; }
+
+    .card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+
+    .btn-sm { padding: 8px 11px; font-size: 12.5px; min-height: 36px; }
+
+    .repeat-btn {
+      color: var(--accent-strong);
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+    }
+    .repeat-btn:hover { background: rgba(86,193,171,0.22); }
+
+    /* Remove button only shows on an expanded card (same as before) */
+    .card.collapsed .remove { display: none; }
+
+    /* Key numbers, designed to be readable at a glance: time since the last
+       dose is the big number on the card — for pacing, "when" matters more
+       than "how much". The running total sits beside it, slightly quieter. */
+    .meta {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+      pointer-events: none; margin-top: 6px; min-height: 18px;
+    }
+    .meta-block { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .meta-block:last-child { text-align: right; }
+    .meta-label {
+      font-size: 11px; font-weight: 600; color: var(--faint);
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .meta .last {
+      font-size: 26px; font-weight: 800; letter-spacing: -0.02em;
+      color: var(--text); font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+      line-height: 1.15;
+    }
+    /* Dosed within the last hour: tint the timer so "recent" stands out */
+    .meta .last.recent { color: var(--accent-strong); }
+    .meta .total {
+      font-size: 14px; font-weight: 550; color: var(--muted);
+      font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+    }
+
+    /* ===== Smooth collapse/expand =====
+       The body sits inside a grid row that animates between 0 and full height.
+       No JavaScript measuring needed. */
+    .card-collapse {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows var(--t-med) var(--ease);
+    }
+    .card.collapsed .card-collapse { grid-template-rows: 0fr; }
+    .card-body {
+      overflow: hidden;
+      min-height: 0;
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 0 16px;
+      opacity: 1;
+      transition: opacity var(--t-med) var(--ease);
+    }
+    .card:not(.collapsed) .card-body { padding-bottom: 16px; }
+    .card.collapsed .card-body { opacity: 0; }
+
+    /* ===== Inputs & selects =====
+       (.drug-title is excluded — it's an editable heading, not a form box) */
+    input[type="text"]:not(.drug-title), input[type="time"], select {
+      width: 100%;
+      min-height: var(--control-h);
+      padding: 10px 13px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--surface-2);
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+      transition: border-color var(--t-fast) var(--ease),
+                  background var(--t-fast) var(--ease),
+                  box-shadow var(--t-fast) var(--ease);
+    }
+    input[type="text"]::placeholder { color: var(--faint); }
+    input[type="text"]:not(.drug-title):focus, input[type="time"]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-ring);
+      background: var(--surface-3);
+    }
+
+    /* Custom chevron on selects (the data: image is inlined — no network) */
+    select {
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23a6aebd' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    /* Amount / unit / Add row */
+    .dose-grid { display: grid; grid-template-columns: 1fr 110px auto; gap: 8px; }
+
+    button.add-btn {
+      min-height: var(--control-h);
+      padding: 0 18px;
+      font-size: 15px;
+      font-weight: 700;
+      background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
+      border-color: transparent;
+      color: var(--on-accent);
+      box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+    button.add-btn:hover { background: var(--accent-strong); }
+
+    /* ===== Colour picker ===== */
+    .color-picker { position: relative; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .color-picker label { font-size: 12.5px; color: var(--muted); }
+    .color-select-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; min-height: 40px; font-size: 13.5px;
+    }
+    .color-select-btn .swatch, .color-option .swatch {
+      width: 13px; height: 13px; border-radius: 999px;
+      background: var(--swatch, #56c1ab);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.25) inset;
+      flex-shrink: 0;
+    }
+    .color-menu {
+      /* Floating dropdown. Its position is set in JS using position:fixed
+         (relative to the screen) so it overlays *beyond* the card instead
+         of being clipped by the card's overflow:hidden — which is needed
+         for the rounded corners and the open/close animation. */
+      position: fixed; min-width: 200px;
+      max-height: 60vh; overflow-y: auto;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px; padding: 6px;
+      box-shadow: var(--shadow);
+      display: none; z-index: 1000;
+      animation: pop-in var(--t-fast) var(--ease);
+    }
+    .color-picker.open .color-menu { display: grid; grid-template-columns: 1fr; gap: 4px; }
+    .color-option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 10px; min-height: 40px;
+      border-radius: 8px; border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .color-option:hover { background: rgba(255,255,255,0.07); }
+    .color-option[aria-selected="true"] { border-color: var(--border-strong); background: rgba(255,255,255,0.05); }
+    .color-option .label { font-size: 14px; }
+
+    /* ===== Log panel ===== */
+    .log {
+      margin-top: 24px;
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+    }
+    .log-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; row-gap: 8px;
+    }
+
+    /* The share button gets the accent treatment — it's the friendly action.
+       "Start fresh" in the welcome-back prompt shares the same look. */
+    #share-log, #share-send, #fresh-clear {
+      color: var(--accent-strong);
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+    }
+    #share-log:hover, #share-send:hover, #fresh-clear:hover { background: rgba(86,193,171,0.22); }
+
+    .log-header h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+    .controls { display: flex; gap: 8px; }
+    .controls button { padding: 8px 12px; font-size: 12.5px; min-height: 36px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }
+    thead th {
+      text-align: left; padding: 10px 14px;
+      color: var(--faint); font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody td { padding: 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    .empty-row td { text-align: center; color: var(--muted); padding: 28px 18px; line-height: 1.6; }
+
+    td.dose-cell { font-variant-numeric: tabular-nums; font-weight: 600; }
+    td.time-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .row-actions { white-space: nowrap; text-align: right; }
+    .icon-btn {
+      border: none; background: transparent; color: var(--muted); cursor: pointer;
+      font-size: 16px; line-height: 1; padding: 4px 6px;
+      min-width: 36px; min-height: 36px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+    }
+    .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .icon-danger:hover { color: var(--danger); background: var(--danger-soft); }
+
+    /* ===== Chips & pills (coloured drug labels) ===== */
+    .drug-pill {
+      display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px;
+      border-radius: 999px; border: 1px solid var(--border-strong);
+      background: rgba(255,255,255,0.05); max-width: 100%; font-size: 13.5px;
+    }
+    .drug-pill .color-dot { width: 9px; height: 9px; border-radius: 999px; display: inline-block; flex-shrink: 0; }
+    .drug-chip {
+      display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px;
+      border-radius: 999px; font-weight: 600; font-size: 13.5px;
+      max-width: 100%; white-space: normal; border: 1px solid var(--border-strong); flex-wrap: wrap;
+    }
+    .drug-chip > span:not(.dot) { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+    .drug-chip .dot {
+      width: 9px; height: 9px; border-radius: 999px; flex: 0 0 9px;
+      background: var(--dot, #56c1ab); box-shadow: 0 0 0 1px rgba(0,0,0,0.15) inset;
+    }
+
+    .edit-input { width: 100%; min-width: 0; }
+
+    /* Layout for the amount + unit fields while editing a log row */
+    .edit-amount-grid { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; }
+
+    /* If iOS AutoFill touches a field it paints it with its own (light)
+       background, which made light text invisible. Force our colours. */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--text);
+      -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
+      caret-color: var(--text);
+    }
+
+    /* ===== Snackbar (toast) ===== */
+    .snackbar {
+      position: fixed; left: 50%; bottom: calc(24px + var(--safe-bottom));
+      transform: translateX(-50%);
+      background: var(--surface-3); color: var(--text);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px; padding: 12px 16px;
+      box-shadow: var(--shadow);
+      display: none; gap: 12px; align-items: center; z-index: 1000;
+      font-size: 14px; font-weight: 500;
+      max-width: min(92vw, 420px);
+    }
+    .snackbar.show { display: inline-flex; animation: toast-in var(--t-med) var(--ease); }
+    /* The "Undo" button inside the snackbar */
+    .snackbar-action {
+      border: none; background: transparent;
+      color: var(--accent-strong); font-family: inherit;
+      font-size: 14px; font-weight: 700;
+      padding: 6px 8px; margin: -4px -6px -4px 0;
+      border-radius: 8px; cursor: pointer; flex-shrink: 0;
+    }
+    .snackbar-action:hover { background: var(--accent-soft); }
+    .snackbar-action[hidden] { display: none; }
+
+    /* ===== Modals ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: rgba(8, 10, 14, 0.65);
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+      z-index: 1100; padding: 16px;
+      animation: fade-in var(--t-fast) ease forwards;
+    }
+    .modal-overlay.show { display: flex; }
+    #confirm { z-index: 1200; }
+
+    @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes pop-in { from { opacity: 0; transform: translateY(4px) scale(0.98) } to { opacity: 1; transform: none } }
+    @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px) } to { opacity: 1; transform: translate(-50%, 0) } }
+
+    .modal {
+      width: min(92vw, 520px); max-height: 80vh; overflow: auto;
+      background: var(--surface-3);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      animation: pop-in var(--t-med) var(--ease) forwards;
+    }
+    .modal h4 { margin: 0 0 6px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+    .modal p { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .modal .actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .btn { padding: 10px 14px; min-height: 42px; font-size: 14px; }
+    .btn-danger { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger); }
+    .btn-danger:hover { background: rgba(239,110,102,0.22); }
+    .btn-ghost { background: transparent; }
+    .btn-ghost:hover { background: rgba(255,255,255,0.07); }
+
+    /* Share preview: the exact image about to be sent, scrollable if long */
+    #share-preview-img {
+      display: block; width: 100%;
+      border: 1px solid var(--border-strong); border-radius: 12px;
+    }
+
+    /* QR code in the Information dialog. The white padding is the "quiet
+       zone" scanners need around a code — don't shrink it. */
+    .qr-card {
+      width: fit-content;
+      margin: 16px auto 6px;
+      padding: 14px;
+      background: #ffffff;
+      border-radius: 12px;
+    }
+    .qr-card svg { display: block; width: 168px; height: 168px; }
+
+    /* Readable address + guide link under the QR in the Information dialog */
+    .privacy-content .qr-url {
+      text-align: center; font-size: 15px; font-weight: 650;
+      color: var(--text); margin: 0 0 6px;
+    }
+    #welcome-again { display: block; margin: 12px auto 0; }
+
+    /* ===== Welcome screen (first visit) ===== */
+    #welcome { z-index: 1150; }
+    .welcome { width: min(92vw, 460px); text-align: center; padding: 26px 22px 20px; }
+    .welcome-emblem {
+      width: 64px; height: 64px; margin: 2px auto 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #232b36 0%, #11151b 100%);
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45),
+                  0 0 26px color-mix(in srgb, var(--accent) 18%, transparent);
+      display: grid; place-items: center;
+    }
+    .welcome-emblem svg { width: 46px; height: 46px; }
+    .welcome h2 { margin: 0 0 6px; font-size: 22px; font-weight: 750; letter-spacing: -0.02em; }
+    .welcome-tagline { margin: 0 0 18px; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+    .welcome-points { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; text-align: left; }
+    .welcome-points li {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 12px 14px;
+    }
+    .welcome-points svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-strong); }
+    .welcome-points b { display: block; font-size: 14px; margin-bottom: 2px; }
+    .welcome-points span { color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .welcome-install {
+      text-align: left; margin-bottom: 16px;
+      background: var(--accent-soft); border: 1px solid var(--accent-border);
+      border-radius: var(--radius-sm); padding: 13px 15px;
+    }
+    .welcome-install[hidden] { display: none; }
+    .welcome-install h3 {
+      margin: 0 0 8px; font-size: 12.5px; font-weight: 700;
+      color: var(--accent-strong); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .welcome-steps { margin: 0; padding-left: 20px; font-size: 13.5px; line-height: 1.6; display: grid; gap: 4px; }
+    .welcome-steps[hidden] { display: none; }
+    .welcome-steps b { color: var(--accent-strong); }
+    #welcome-install-btn {
+      width: 100%; margin-bottom: 10px;
+      background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
+      border-color: transparent; color: var(--on-accent); font-weight: 700;
+    }
+    #welcome-install-btn[hidden] { display: none; }
+    .welcome-start {
+      width: 100%; min-height: 48px; font-size: 15px; font-weight: 700;
+      background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
+      border-color: transparent; color: var(--on-accent);
+      box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+    .welcome-start:hover { background: var(--accent-strong); }
+
+    /* ===== In-app number pad ===== */
+    /* Replaces the phone's keypad (which draws letters under the digits —
+       a system thing websites can't turn off) with a clean digits-only pad. */
+    #numpad {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 10px 12px calc(10px + var(--safe-bottom));
+      background: var(--surface-3);
+      border-top: 1px solid var(--border-strong);
+      box-shadow: 0 -12px 30px rgba(0,0,0,0.4);
+    }
+    #numpad.show { display: grid; animation: numpad-in var(--t-med) var(--ease); }
+    @keyframes numpad-in { from { transform: translateY(16px); opacity: 0 } to { transform: none; opacity: 1 } }
+    .numpad-key {
+      font-family: inherit;
+      min-height: 52px;
+      font-size: 22px; font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+      transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+    }
+    .numpad-key:active { background: var(--surface-3); transform: scale(0.96); }
+    #numpad-action {
+      grid-column: 1 / -1;
+      font-size: 17px; font-weight: 700;
+      color: var(--accent-strong);
+      border-color: var(--accent-border);
+      background: var(--accent-soft);
+    }
+    /* Extra room at the bottom so the field being typed into can scroll
+       up above the pad */
+    body.numpad-open { padding-bottom: 300px; }
+
+    /* ===== iOS install hint banner ===== */
+    .install-hint {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: calc(76px + var(--safe-bottom));
+      width: min(92vw, 420px);
+      background: var(--surface-3);
+      border: 1px solid var(--accent-border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 12px 14px;
+      display: flex; gap: 10px; align-items: flex-start;
+      z-index: 1060;
+      font-size: 13.5px; line-height: 1.5; color: var(--text);
+      animation: toast-in var(--t-med) var(--ease);
+    }
+    .install-hint[hidden] { display: none; }
+    .install-hint .share-icon { flex-shrink: 0; margin-top: 1px; color: var(--accent-strong); }
+    .install-hint b { color: var(--accent-strong); }
+    .install-hint .hint-close {
+      flex-shrink: 0; border: none; background: transparent; color: var(--muted);
+      font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 6px;
+      min-width: 32px; min-height: 32px; border-radius: 8px;
+    }
+    .install-hint .hint-close:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 720px) {
+      .container { padding-left: 14px; padding-right: 14px; }
+      .grid { grid-template-columns: 1fr; gap: 10px; }
+      .dose-grid { grid-template-columns: 1fr 104px auto; }
+      .toolbar { gap: 8px; }
+      .toolbar button { padding: 0 13px; font-size: 13.5px; }
+      .log-header { padding: 12px; }
+      .log { overflow-x: hidden; }
+
+      thead th { white-space: normal; padding: 8px; }
+      tbody td { padding: 10px 8px; }
+      thead th:nth-child(4), tbody td:nth-child(4) { text-align: right; }
+      tbody td:nth-child(2) { white-space: normal; overflow-wrap: anywhere; }
+      tbody td:nth-child(1) .drug-chip { display: inline-flex; max-width: 100%; white-space: normal; }
+
+      /* On narrow screens, stack the amount field above the unit picker so
+         each gets the full width and typed numbers are always visible */
+      .edit-amount-grid { grid-template-columns: 1fr; }
+
+      /* While editing a row, allow sideways scroll */
+      body.editing .log { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+
+    /* Users who prefer less motion get (almost) none */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <!-- Small "app icon" tile: the same capsule as the home-screen icon,
+           drawn right here in the page so it loads instantly and offline. -->
+      <div class="app-emblem" aria-hidden="true">
+        <svg viewBox="0 0 512 512" focusable="false">
+          <g transform="translate(256 256) scale(1.26) rotate(28) translate(-256 -256)">
+            <rect x="186" y="104" width="140" height="304" rx="70" fill="#e9ecf2"/>
+            <path d="M186 256 h140 v82 a70 70 0 0 1 -140 0 z" style="fill: var(--accent)"/>
+            <rect x="186" y="252" width="140" height="7" fill="#0f1216" opacity="0.30"/>
+            <rect x="203" y="126" width="22" height="90" rx="11" fill="#ffffff" opacity="0.45"/>
+            <rect x="203" y="300" width="22" height="66" rx="11" fill="#ffffff" opacity="0.18"/>
+          </g>
+        </svg>
+      </div>
+      <div>
+        <h1>DoseTracker</h1>
+        <p>Track doses and timing easily on any device.</p>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button id="add-med">+ Add substance</button>
+      </div>
+    </div>
+
+    <section class="grid" id="drug-grid" aria-label="Substances"></section>
+
+    <section class="log" aria-label="Dose log">
+      <div class="log-header">
+        <h3>Tonight's log</h3>
+        <div class="controls">
+          <button id="share-log" title="Send your current log as an image">Share with a Friend</button>
+          <button id="clear-log" title="Clear the log">Clear log</button>
+        </div>
+      </div>
+      <table aria-label="Dose log">
+        <thead>
+          <tr>
+            <th scope="col">Substance</th>
+            <th scope="col">Doses</th>
+            <th scope="col">Time</th>
+            <th scope="col" aria-label="Actions"></th>
+          </tr>
+        </thead>
+        <tbody id="log-body">
+          <tr class="empty-row"><td colspan="4">No doses logged yet.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Quiet footer: rarely-used / destructive actions live down here,
+         away from the everyday buttons -->
+    <footer class="page-footer">
+      <button id="privacy-open" class="footer-link" aria-haspopup="dialog" aria-controls="privacy">Information</button>
+      <span class="footer-sep" aria-hidden="true">·</span>
+      <button id="reset-all" class="footer-link footer-link-danger" title="Clear drugs and entries">Reset Everything</button>
+    </footer>
+  </div>
+
+  <!-- iOS install hint (only shown in Safari on iPhone/iPad when not installed) -->
+  <div id="install-hint" class="install-hint" hidden role="note">
+    <svg class="share-icon" width="18" height="22" viewBox="0 0 18 22" fill="none" aria-hidden="true">
+      <path d="M9 1v13M5 5l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3 9H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <span>Install this app: tap <b>Share</b> in Safari, then <b>"Add&nbsp;to&nbsp;Home&nbsp;Screen"</b>. It will work fully offline.</span>
+    <button class="hint-close" id="install-hint-close" aria-label="Dismiss install hint">&times;</button>
+  </div>
+
+  <!-- Snackbar (can carry an "Undo" button for reversible deletions) -->
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite">
+    <span class="msg" id="snackbar-msg"></span>
+    <button type="button" class="snackbar-action" id="snackbar-action" hidden>Undo</button>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title" style="display:none;">
+    <div class="modal" role="document">
+      <h4 id="confirm-title">Please confirm</h4>
+      <p id="confirm-msg">Are you sure you want to proceed?</p>
+      <div class="actions">
+        <button class="btn btn-ghost" id="confirm-no" autofocus>No</button>
+        <button class="btn btn-danger" id="confirm-yes">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome-back prompt: offered when the log still holds entries from a
+       previous night, so each night can start with a clean slate -->
+  <div id="fresh-start" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="fresh-title" style="display:none;">
+    <div class="modal" role="document">
+      <h4 id="fresh-title">Welcome back</h4>
+      <p id="fresh-msg">Your log still has entries from a previous night. Start fresh, or keep them?</p>
+      <div class="actions">
+        <button class="btn btn-ghost" id="fresh-keep">Keep them</button>
+        <button class="btn" id="fresh-clear">Start fresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share preview modal: shows the image before it goes anywhere -->
+  <div id="share-preview" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="share-preview-title" style="display:none;">
+    <div class="modal" role="document">
+      <h4 id="share-preview-title">Share this image?</h4>
+      <p>This is exactly what will be sent.</p>
+      <img id="share-preview-img" alt="Preview of your dose log image" />
+      <div class="actions" style="margin-top:16px;">
+        <button class="btn btn-ghost" id="share-cancel">Cancel</button>
+        <button class="btn" id="share-send">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome screen: shown once on the first visit; reopen any time via
+       Information → "Show welcome & install guide" -->
+  <div id="welcome" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" style="display:none;">
+    <div class="modal welcome" role="document">
+      <!-- Same capsule emblem as the header / home-screen icon -->
+      <div class="welcome-emblem" aria-hidden="true">
+        <svg viewBox="0 0 512 512" focusable="false">
+          <g transform="translate(256 256) scale(1.26) rotate(28) translate(-256 -256)">
+            <rect x="186" y="104" width="140" height="304" rx="70" fill="#e9ecf2"/>
+            <path d="M186 256 h140 v82 a70 70 0 0 1 -140 0 z" style="fill: var(--accent)"/>
+            <rect x="186" y="252" width="140" height="7" fill="#0f1216" opacity="0.30"/>
+            <rect x="203" y="126" width="22" height="90" rx="11" fill="#ffffff" opacity="0.45"/>
+            <rect x="203" y="300" width="22" height="66" rx="11" fill="#ffffff" opacity="0.18"/>
+          </g>
+        </svg>
+      </div>
+      <h2 id="welcome-title">Welcome to DoseTracker</h2>
+      <p class="welcome-tagline">A simple, private way to keep track of what you take and when.</p>
+      <ul class="welcome-points">
+        <li>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="9.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+          <div><b>Private by design</b><span>Everything stays on your phone. No account, no server — nothing is ever uploaded.</span></div>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11L9.5 22 18 10.5h-6.5L13 2z"/></svg>
+          <div><b>Works offline</b><span>After the first visit it opens instantly, with or without internet.</span></div>
+        </li>
+        <li>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7.2-4.7-9.5-9.2A5.6 5.6 0 0 1 12 6.3a5.6 5.6 0 0 1 9.5 5.5C19.2 16.3 12 21 12 21z"/></svg>
+          <div><b>Free, for everyone</b><span>No ads, no sign-up, no tracking. Just the app.</span></div>
+        </li>
+      </ul>
+      <div class="welcome-install" id="welcome-install">
+        <h3>Get it on your home screen</h3>
+        <button class="btn" id="welcome-install-btn" hidden>Install the app</button>
+        <ol class="welcome-steps" id="welcome-steps"></ol>
+      </div>
+      <button class="btn welcome-start" id="welcome-start">Get started</button>
+    </div>
+  </div>
+
+  <!-- Privacy Modal -->
+  <div id="privacy" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="privacy-title" style="display:none;">
+    <div class="modal" role="document">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <h4 id="privacy-title" style="margin:0;">Information</h4>
+        <div class="actions">
+          <button class="btn btn-ghost" id="privacy-close">Close</button>
+        </div>
+      </div>
+      <div class="privacy-content">
+        <p><em>Everything you track stays on your phone.</em></p>
+        <p>There is no server and no account — nothing is ever uploaded, and the app works fully offline. Someone opening the app’s link can never see your entries; they simply get their own empty copy. To erase your data, use “Reset Everything”.</p>
+        <p>If a friend wants DoseTracker too, they can scan this QR code with their phone’s camera — or simply type in the address under it:</p>
+        <div class="qr-card">
+          <!-- QR code for the app URL (generated once, works offline) -->
+          <svg role="img" aria-label="QR code linking to the DoseTracker app" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h29v29H0z"/><path fill="#000000" d="M0,0H1V1H0zM1,0H2V1H1zM2,0H3V1H2zM3,0H4V1H3zM4,0H5V1H4zM5,0H6V1H5zM6,0H7V1H6zM9,0H10V1H9zM11,0H12V1H11zM12,0H13V1H12zM14,0H15V1H14zM18,0H19V1H18zM22,0H23V1H22zM23,0H24V1H23zM24,0H25V1H24zM25,0H26V1H25zM26,0H27V1H26zM27,0H28V1H27zM28,0H29V1H28zM0,1H1V2H0zM6,1H7V2H6zM9,1H10V2H9zM12,1H13V2H12zM13,1H14V2H13zM14,1H15V2H14zM17,1H18V2H17zM18,1H19V2H18zM19,1H20V2H19zM20,1H21V2H20zM22,1H23V2H22zM28,1H29V2H28zM0,2H1V3H0zM2,2H3V3H2zM3,2H4V3H3zM4,2H5V3H4zM6,2H7V3H6zM8,2H9V3H8zM9,2H10V3H9zM10,2H11V3H10zM11,2H12V3H11zM15,2H16V3H15zM16,2H17V3H16zM17,2H18V3H17zM18,2H19V3H18zM19,2H20V3H19zM20,2H21V3H20zM22,2H23V3H22zM24,2H25V3H24zM25,2H26V3H25zM26,2H27V3H26zM28,2H29V3H28zM0,3H1V4H0zM2,3H3V4H2zM3,3H4V4H3zM4,3H5V4H4zM6,3H7V4H6zM11,3H12V4H11zM13,3H14V4H13zM14,3H15V4H14zM18,3H19V4H18zM19,3H20V4H19zM20,3H21V4H20zM22,3H23V4H22zM24,3H25V4H24zM25,3H26V4H25zM26,3H27V4H26zM28,3H29V4H28zM0,4H1V5H0zM2,4H3V5H2zM3,4H4V5H3zM4,4H5V5H4zM6,4H7V5H6zM8,4H9V5H8zM10,4H11V5H10zM12,4H13V5H12zM13,4H14V5H13zM14,4H15V5H14zM17,4H18V5H17zM18,4H19V5H18zM22,4H23V5H22zM24,4H25V5H24zM25,4H26V5H25zM26,4H27V5H26zM28,4H29V5H28zM0,5H1V6H0zM6,5H7V6H6zM8,5H9V6H8zM9,5H10V6H9zM12,5H13V6H12zM13,5H14V6H13zM14,5H15V6H14zM15,5H16V6H15zM16,5H17V6H16zM18,5H19V6H18zM19,5H20V6H19zM22,5H23V6H22zM28,5H29V6H28zM0,6H1V7H0zM1,6H2V7H1zM2,6H3V7H2zM3,6H4V7H3zM4,6H5V7H4zM5,6H6V7H5zM6,6H7V7H6zM8,6H9V7H8zM10,6H11V7H10zM12,6H13V7H12zM14,6H15V7H14zM16,6H17V7H16zM18,6H19V7H18zM20,6H21V7H20zM22,6H23V7H22zM23,6H24V7H23zM24,6H25V7H24zM25,6H26V7H25zM26,6H27V7H26zM27,6H28V7H27zM28,6H29V7H28zM11,7H12V8H11zM12,7H13V8H12zM14,7H15V8H14zM15,7H16V8H15zM17,7H18V8H17zM18,7H19V8H18zM19,7H20V8H19zM20,7H21V8H20zM1,8H2V9H1zM4,8H5V9H4zM6,8H7V9H6zM8,8H9V9H8zM9,8H10V9H9zM11,8H12V9H11zM13,8H14V9H13zM14,8H15V9H14zM16,8H17V9H16zM17,8H18V9H17zM20,8H21V9H20zM21,8H22V9H21zM23,8H24V9H23zM24,8H25V9H24zM26,8H27V9H26zM1,9H2V10H1zM2,9H3V10H2zM3,9H4V10H3zM5,9H6V10H5zM7,9H8V10H7zM9,9H10V10H9zM12,9H13V10H12zM14,9H15V10H14zM15,9H16V10H15zM16,9H17V10H16zM18,9H19V10H18zM20,9H21V10H20zM21,9H22V10H21zM22,9H23V10H22zM23,9H24V10H23zM24,9H25V10H24zM26,9H27V10H26zM27,9H28V10H27zM28,9H29V10H28zM0,10H1V11H0zM1,10H2V11H1zM5,10H6V11H5zM6,10H7V11H6zM8,10H9V11H8zM10,10H11V11H10zM12,10H13V11H12zM13,10H14V11H13zM14,10H15V11H14zM15,10H16V11H15zM17,10H18V11H17zM18,10H19V11H18zM21,10H22V11H21zM25,10H26V11H25zM28,10H29V11H28zM0,11H1V12H0zM3,11H4V12H3zM9,11H10V12H9zM14,11H15V12H14zM17,11H18V12H17zM18,11H19V12H18zM19,11H20V12H19zM21,11H22V12H21zM23,11H24V12H23zM24,11H25V12H24zM25,11H26V12H25zM27,11H28V12H27zM28,11H29V12H28zM0,12H1V13H0zM2,12H3V13H2zM3,12H4V13H3zM4,12H5V13H4zM5,12H6V13H5zM6,12H7V13H6zM8,12H9V13H8zM10,12H11V13H10zM11,12H12V13H11zM13,12H14V13H13zM16,12H17V13H16zM17,12H18V13H17zM19,12H20V13H19zM20,12H21V13H20zM23,12H24V13H23zM28,12H29V13H28zM1,13H2V14H1zM3,13H4V14H3zM7,13H8V14H7zM10,13H11V14H10zM13,13H14V14H13zM14,13H15V14H14zM16,13H17V14H16zM17,13H18V14H17zM22,13H23V14H22zM24,13H25V14H24zM26,13H27V14H26zM28,13H29V14H28zM1,14H2V15H1zM2,14H3V15H2zM3,14H4V15H3zM5,14H6V15H5zM6,14H7V15H6zM8,14H9V15H8zM9,14H10V15H9zM12,14H13V15H12zM18,14H19V15H18zM22,14H23V15H22zM24,14H25V15H24zM28,14H29V15H28zM0,15H1V16H0zM2,15H3V16H2zM5,15H6V16H5zM8,15H9V16H8zM10,15H11V16H10zM11,15H12V16H11zM13,15H14V16H13zM14,15H15V16H14zM17,15H18V16H17zM18,15H19V16H18zM20,15H21V16H20zM21,15H22V16H21zM22,15H23V16H22zM23,15H24V16H23zM25,15H26V16H25zM0,16H1V17H0zM1,16H2V17H1zM6,16H7V17H6zM7,16H8V17H7zM8,16H9V17H8zM9,16H10V17H9zM11,16H12V17H11zM12,16H13V17H12zM13,16H14V17H13zM15,16H16V17H15zM17,16H18V17H17zM18,16H19V17H18zM19,16H20V17H19zM20,16H21V17H20zM21,16H22V17H21zM28,16H29V17H28zM0,17H1V18H0zM1,17H2V18H1zM2,17H3V18H2zM4,17H5V18H4zM7,17H8V18H7zM10,17H11V18H10zM13,17H14V18H13zM14,17H15V18H14zM16,17H17V18H16zM18,17H19V18H18zM22,17H23V18H22zM23,17H24V18H23zM24,17H25V18H24zM25,17H26V18H25zM26,17H27V18H26zM28,17H29V18H28zM3,18H4V19H3zM6,18H7V19H6zM9,18H10V19H9zM10,18H11V19H10zM16,18H17V19H16zM17,18H18V19H17zM18,18H19V19H18zM20,18H21V19H20zM24,18H25V19H24zM26,18H27V19H26zM28,18H29V19H28zM4,19H5V20H4zM7,19H8V20H7zM10,19H11V20H10zM11,19H12V20H11zM12,19H13V20H12zM14,19H15V20H14zM17,19H18V20H17zM20,19H21V20H20zM27,19H28V20H27zM0,20H1V21H0zM1,20H2V21H1zM2,20H3V21H2zM4,20H5V21H4zM6,20H7V21H6zM10,20H11V21H10zM11,20H12V21H11zM13,20H14V21H13zM15,20H16V21H15zM17,20H18V21H17zM19,20H20V21H19zM20,20H21V21H20zM21,20H22V21H21zM22,20H23V21H22zM23,20H24V21H23zM24,20H25V21H24zM25,20H26V21H25zM27,20H28V21H27zM28,20H29V21H28zM8,21H9V22H8zM9,21H10V22H9zM10,21H11V22H10zM12,21H13V22H12zM13,21H14V22H13zM14,21H15V22H14zM15,21H16V22H15zM16,21H17V22H16zM17,21H18V22H17zM19,21H20V22H19zM20,21H21V22H20zM24,21H25V22H24zM26,21H27V22H26zM28,21H29V22H28zM0,22H1V23H0zM1,22H2V23H1zM2,22H3V23H2zM3,22H4V23H3zM4,22H5V23H4zM5,22H6V23H5zM6,22H7V23H6zM14,22H15V23H14zM15,22H16V23H15zM18,22H19V23H18zM19,22H20V23H19zM20,22H21V23H20zM22,22H23V23H22zM24,22H25V23H24zM28,22H29V23H28zM0,23H1V24H0zM6,23H7V24H6zM9,23H10V24H9zM10,23H11V24H10zM11,23H12V24H11zM15,23H16V24H15zM16,23H17V24H16zM17,23H18V24H17zM18,23H19V24H18zM19,23H20V24H19zM20,23H21V24H20zM24,23H25V24H24zM25,23H26V24H25zM0,24H1V25H0zM2,24H3V25H2zM3,24H4V25H3zM4,24H5V25H4zM6,24H7V25H6zM8,24H9V25H8zM9,24H10V25H9zM10,24H11V25H10zM11,24H12V25H11zM18,24H19V25H18zM19,24H20V25H19zM20,24H21V25H20zM21,24H22V25H21zM22,24H23V25H22zM23,24H24V25H23zM24,24H25V25H24zM0,25H1V26H0zM2,25H3V26H2zM3,25H4V26H3zM4,25H5V26H4zM6,25H7V26H6zM12,25H13V26H12zM14,25H15V26H14zM18,25H19V26H18zM23,25H24V26H23zM27,25H28V26H27zM0,26H1V27H0zM2,26H3V27H2zM3,26H4V27H3zM4,26H5V27H4zM6,26H7V27H6zM11,26H12V27H11zM13,26H14V27H13zM14,26H15V27H14zM15,26H16V27H15zM16,26H17V27H16zM19,26H20V27H19zM20,26H21V27H20zM21,26H22V27H21zM26,26H27V27H26zM27,26H28V27H27zM28,26H29V27H28zM0,27H1V28H0zM6,27H7V28H6zM8,27H9V28H8zM9,27H10V28H9zM10,27H11V28H10zM11,27H12V28H11zM15,27H16V28H15zM16,27H17V28H16zM17,27H18V28H17zM19,27H20V28H19zM20,27H21V28H20zM21,27H22V28H21zM23,27H24V28H23zM25,27H26V28H25zM27,27H28V28H27zM28,27H29V28H28zM0,28H1V29H0zM1,28H2V29H1zM2,28H3V29H2zM3,28H4V29H3zM4,28H5V29H4zM5,28H6V29H5zM6,28H7V29H6zM9,28H10V29H9zM10,28H11V29H10zM12,28H13V29H12zM13,28H14V29H13zM14,28H15V29H14zM17,28H18V29H17zM20,28H21V29H20zM24,28H25V29H24zM25,28H26V29H25zM27,28H28V29H27z"/></svg>
+        </div>
+        <p class="qr-url">dosetracker.github.io</p>
+        <button class="btn btn-ghost" id="welcome-again">Show welcome &amp; install guide</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-app number pad (slides up instead of the system keyboard) -->
+  <div id="numpad" role="group" aria-label="Number pad">
+    <button type="button" class="numpad-key" data-key="1">1</button>
+    <button type="button" class="numpad-key" data-key="2">2</button>
+    <button type="button" class="numpad-key" data-key="3">3</button>
+    <button type="button" class="numpad-key" data-key="4">4</button>
+    <button type="button" class="numpad-key" data-key="5">5</button>
+    <button type="button" class="numpad-key" data-key="6">6</button>
+    <button type="button" class="numpad-key" data-key="7">7</button>
+    <button type="button" class="numpad-key" data-key="8">8</button>
+    <button type="button" class="numpad-key" data-key="9">9</button>
+    <button type="button" class="numpad-key" data-key="." aria-label="Decimal point">.</button>
+    <button type="button" class="numpad-key" data-key="0">0</button>
+    <button type="button" class="numpad-key" data-key="back" aria-label="Delete last digit">⌫</button>
+    <button type="button" class="numpad-key" id="numpad-action" data-key="action">Add</button>
+  </div>
+
+  <script>
+    // --- Utilities ---
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    function timeStr(d) {
+      if (!d || isNaN(d)) return '—';
+      try { return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(d); }
+      catch { return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}); }
+    }
+
+    function dateLabel(d) {
+      // Formatted the way the phone's own region writes dates ("Jul 3" / "3. Juli")
+      if (!d || isNaN(d)) return '—';
+      try { return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(d); }
+      catch { return d.toLocaleDateString(); }
+    }
+
+    function dayKey(d) {
+      if (!d || isNaN(d)) return '1970-01-01';
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function fmtNumber(n) {
+      if (n == null || !isFinite(n)) return '';
+      return (Math.round(n*1000)/1000).toString();
+    }
+
+    function uid(prefix='id') { return `${prefix}_${Math.random().toString(36).slice(2,9)}_${Date.now().toString(36)}`; }
+
+    function formatAsTime(d) {
+      if (!d || isNaN(d)) return '';
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function nameKey(str) { return (str || '').toString().trim().toLowerCase(); }
+
+    function hexToRgba(hex, a = 1) {
+      const v = (hex || '').replace('#','');
+      const r = parseInt(v.substring(0,2),16) || 0;
+      const g = parseInt(v.substring(2,4),16) || 0;
+      const b = parseInt(v.substring(4,6),16) || 0;
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    // --- Unit normalization & pluralization ---
+    function normalizeUnit(unitRaw) {
+      if (!unitRaw) return '';
+      const raw = unitRaw.trim();
+      const token = raw.toLowerCase();
+      if (token === 'ml') return 'mL';
+      if (token === 'l') return 'L';
+      if (token === 'ug' || token === 'mcg' || token === 'µg') return 'µg';
+      return raw.toLowerCase();
+    }
+
+    const PLURALS = { pill: ['pill', 'pills'], tab: ['tab', 'tabs'], line: ['line', 'lines'], drop: ['drop', 'drops'], unit: ['unit', 'units'] };
+
+    function displayValueUnit(value, unit) {
+      if (!unit) return fmtNumber(value);
+      const uCanon = normalizeUnit(unit);
+      const p = PLURALS[uCanon];
+      if (p) { const u = (value === 1) ? p[0] : p[1]; return `${fmtNumber(value)} ${u}`; }
+      return `${fmtNumber(value)} ${uCanon}`;
+    }
+
+    const UNIT_OPTIONS = [
+      { value: 'mg', label: 'mg' },
+      { value: 'g', label: 'g' },
+      { value: 'µg', label: 'µg' },
+      { value: 'pill', label: 'pill' },
+      { value: 'tab', label: 'tab' },
+      { value: 'line', label: 'line' },
+      { value: 'unit', label: 'unit' },
+      { value: 'ml', label: 'ml' },
+      { value: 'l', label: 'l' },
+      { value: 'drop', label: 'drop' }
+    ];
+
+    const palette = ['#ef4444','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+    const paletteNames = ['Red','Orange','Yellow','Lime','Green','Teal','Cyan','Blue','Violet','Pink'];
+
+    // --- State ---
+    // IMPORTANT: the storage key stays the same so existing data keeps working.
+    // The shape is now { drugs, entries }; any old `history` is dropped on load.
+    const initialState = { drugs: [], entries: [] };
+    const STORAGE_KEY = 'med_tracker_v2_state';
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(initialState);
+        const parsed = JSON.parse(raw);
+        parsed.entries?.forEach(e => e.ts = new Date(e.ts));
+        if (!Array.isArray(parsed.drugs)) parsed.drugs = [];
+        if (!Array.isArray(parsed.entries)) parsed.entries = [];
+        delete parsed.history; // history was removed; discard any leftover from older versions
+        parsed.drugs.forEach((d, i) => {
+          if (!d.color) d.color = palette[i % palette.length];
+          if (typeof d.expanded === 'undefined') d.expanded = false; // Default to collapsed
+        });
+        return parsed;
+      } catch (e) {
+        console.error('State load failed, resetting:', e);
+        return structuredClone(initialState);
+      }
+    }
+
+    let state = loadState();
+    function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {} }
+
+    function lastDoseDate(drugId) {
+      let latest = null;
+      for (const e of state.entries) {
+        if (e.drugId !== drugId) continue;
+        if (!latest || e.ts > latest) latest = e.ts;
+      }
+      return latest;
+    }
+
+    function getLastEntry(drugId) {
+      let latestEntry = null;
+      for (const e of state.entries) {
+        if (e.drugId !== drugId) continue;
+        if (!latestEntry || e.ts > latestEntry.ts) latestEntry = e;
+      }
+      return latestEntry;
+    }
+
+    // --- UI Controls ---
+    const snackbar = $('#snackbar');
+    const snackbarMsg = $('#snackbar-msg');
+    const snackbarAction = $('#snackbar-action');
+    let toastTimer = null;
+    let toastActionFn = null;
+    // Optionally pass an action ("Undo") — deletions happen right away and the
+    // toast offers a few seconds to take them back, instead of an "Are you
+    // sure?" question before every little thing.
+    function showToast(message, duration=2500, actionLabel=null, onAction=null) {
+      if (toastTimer) clearTimeout(toastTimer);
+      snackbarMsg.textContent = message;
+      toastActionFn = (actionLabel && onAction) ? onAction : null;
+      if (toastActionFn) { snackbarAction.textContent = actionLabel; snackbarAction.hidden = false; }
+      else { snackbarAction.hidden = true; }
+      snackbar.classList.add('show');
+      toastTimer = setTimeout(hideToast, duration);
+    }
+    function hideToast() {
+      if (toastTimer) clearTimeout(toastTimer);
+      snackbar.classList.remove('show');
+      toastTimer = null; toastActionFn = null;
+    }
+    snackbarAction.addEventListener('click', () => {
+      const fn = toastActionFn;
+      hideToast();
+      if (fn) fn();
+    });
+
+    // Confirmation modal
+    const confirmOverlay = $('#confirm');
+    const confirmMsg = $('#confirm-msg');
+    const btnYes = $('#confirm-yes');
+    const btnNo = $('#confirm-no');
+    let confirmResolver = null;
+    let lastFocused = null;
+
+    function openConfirm(message) {
+      confirmMsg.textContent = message;
+      lastFocused = document.activeElement;
+      confirmOverlay.style.display = 'flex';
+      confirmOverlay.classList.add('show');
+      btnNo.focus();
+      return new Promise((resolve) => { confirmResolver = resolve; });
+    }
+    function closeConfirm(result=false) {
+      confirmOverlay.classList.remove('show');
+      confirmOverlay.style.display = 'none';
+      if (typeof confirmResolver === 'function') { const r = confirmResolver; confirmResolver = null; r(result); }
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    }
+    btnYes.addEventListener('click', () => closeConfirm(true));
+    btnNo.addEventListener('click', () => closeConfirm(false));
+    confirmOverlay.addEventListener('click', (e) => { if (e.target === confirmOverlay) closeConfirm(false); });
+    document.addEventListener('keydown', (e) => {
+      if (confirmOverlay.classList.contains('show')) {
+        if (e.key === 'Escape') { e.preventDefault(); closeConfirm(false); }
+        if (e.key === 'Enter') { e.preventDefault(); closeConfirm(true); }
+      }
+    });
+
+    // --- In-app number pad ---
+    // iPhones draw small letters under the digits on the system keypad and
+    // websites can't turn that off, so the app brings its own clean pad.
+    // It can also open by itself (the system keyboard only opens during a
+    // real tap), e.g. right after a new drug is named.
+    const numpad = $('#numpad');
+    const numpadActionBtn = $('#numpad-action');
+    let padTarget = null;   // the input being typed into
+    let padAction = null;   // what the big bottom key does
+
+    // Taps on the pad must not steal focus from the input it types into
+    numpad.addEventListener('pointerdown', (e) => e.preventDefault());
+
+    function openNumpad(input, actionLabel, onAction) {
+      padTarget = input;
+      padAction = onAction;
+      numpadActionBtn.textContent = actionLabel;
+      numpad.classList.add('show');
+      document.body.classList.add('numpad-open');
+      // Give the page its extra bottom room first, then bring the field into view
+      setTimeout(() => input.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+    }
+
+    function closeNumpad() {
+      const t = padTarget;
+      padTarget = null;
+      padAction = null;
+      numpad.classList.remove('show');
+      document.body.classList.remove('numpad-open');
+      if (t && document.activeElement === t) t.blur();
+    }
+
+    numpad.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-key]');
+      if (!btn || !padTarget) return;
+      const k = btn.dataset.key;
+      if (k === 'action') { const fn = padAction; closeNumpad(); if (fn) fn(); return; }
+      if (k === 'back') padTarget.value = padTarget.value.slice(0, -1);
+      else if (k === '.') { if (!/[.,]/.test(padTarget.value)) padTarget.value += '.'; }
+      else padTarget.value += k;
+    });
+
+    // Tapping anywhere else puts the pad away
+    document.addEventListener('pointerdown', (e) => {
+      if (padTarget && !numpad.contains(e.target) && e.target !== padTarget) closeNumpad();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (padTarget && e.key === 'Escape') closeNumpad();
+    });
+
+    // Makes an amount field use the in-app pad instead of the system keyboard
+    function useNumpad(input, actionLabel, onAction) {
+      input.setAttribute('inputmode', 'none'); // keeps the system keyboard closed
+      input.addEventListener('focus', () => openNumpad(input, actionLabel, onAction));
+      input.addEventListener('blur', () => { if (padTarget === input) closeNumpad(); });
+    }
+
+    // Reset Everything Button
+    $('#reset-all').addEventListener('click', async () => {
+      const ok = await openConfirm('This will permanently delete all substances and log entries. Proceed?');
+      if (ok) {
+        state = structuredClone(initialState);
+        saveState();
+        render();
+        showToast('Everything reset.');
+      }
+    });
+
+    // --- Share with a Friend ---
+    // Draws the current log as a tidy image (which drug, dose, when — grouped
+    // by day, with totals at the end), shows it in a preview first, and only
+    // opens the phone's share sheet after "Send" is tapped. Nothing is
+    // uploaded anywhere; the image goes only to whoever the user sends it
+    // to. On computers without a share sheet it downloads.
+    const sharePreviewOverlay = $('#share-preview');
+    const sharePreviewImg = $('#share-preview-img');
+    let shareFile = null; // the image waiting in the preview
+
+    $('#share-log').addEventListener('click', async () => {
+      if (!state.entries.length) { showToast('Nothing to share yet — the log is empty.'); return; }
+      try {
+        const canvas = drawShareCard();
+        const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+        if (!blob) { showToast('Could not create the image.'); return; }
+        shareFile = new File([blob], 'dose-log.png', { type: 'image/png' });
+        sharePreviewImg.src = URL.createObjectURL(blob);
+        sharePreviewOverlay.style.display = 'flex';
+        sharePreviewOverlay.classList.add('show');
+        $('#share-send').focus();
+      } catch (err) {
+        console.error('Share failed:', err);
+        showToast('Sharing failed — please try again.');
+      }
+    });
+
+    function closeSharePreview() {
+      sharePreviewOverlay.classList.remove('show');
+      sharePreviewOverlay.style.display = 'none';
+      if (sharePreviewImg.src) { URL.revokeObjectURL(sharePreviewImg.src); sharePreviewImg.removeAttribute('src'); }
+      shareFile = null;
+    }
+
+    $('#share-cancel').addEventListener('click', closeSharePreview);
+    sharePreviewOverlay.addEventListener('click', (e) => { if (e.target === sharePreviewOverlay) closeSharePreview(); });
+    document.addEventListener('keydown', (e) => {
+      if (sharePreviewOverlay.classList.contains('show') && e.key === 'Escape') { e.preventDefault(); closeSharePreview(); }
+    });
+
+    $('#share-send').addEventListener('click', async () => {
+      const file = shareFile;
+      if (!file) return;
+      closeSharePreview();
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+        } catch (err) {
+          // User closed the share sheet — that's fine, do nothing
+          if (err && err.name !== 'AbortError') downloadShareImage(file);
+        }
+      } else {
+        downloadShareImage(file);
+        showToast('Image saved — send it however you like.');
+      }
+    });
+
+    function downloadShareImage(blob) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `dose-log-${new Date().toISOString().slice(0, 10)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    // Shortens text with an ellipsis so long drug names can't break the layout
+    function ellipsize(ctx, text, maxW) {
+      if (ctx.measureText(text).width <= maxW) return text;
+      let t = text;
+      while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+      return t + '…';
+    }
+
+    // Small capsule emblem (matches the app icon) for the image header
+    function drawCapsuleGlyph(ctx, cx, cy, h, teal) {
+      const w = h * 0.46, r = w / 2;
+      const capsulePath = () => {
+        ctx.beginPath();
+        ctx.moveTo(-w / 2, -h / 2 + r);
+        ctx.arc(0, -h / 2 + r, r, Math.PI, 0);
+        ctx.lineTo(w / 2, h / 2 - r);
+        ctx.arc(0, h / 2 - r, r, 0, Math.PI);
+        ctx.closePath();
+      };
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((28 * Math.PI) / 180);
+      capsulePath();
+      ctx.fillStyle = '#e9ecf2';
+      ctx.fill();
+      ctx.save();
+      capsulePath();
+      ctx.clip();
+      ctx.fillStyle = teal;
+      ctx.fillRect(-w / 2, 0, w, h / 2);
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function drawShareCard() {
+      // Pull colours from the live theme so the image always matches the app
+      const rootStyle = getComputedStyle(document.documentElement);
+      const themeVar = (name, fallback) => (rootStyle.getPropertyValue(name) || '').trim() || fallback;
+      const COL = {
+        bg: themeVar('--bg', '#0f1216'),
+        text: themeVar('--text', '#e9ecf2'),
+        muted: themeVar('--muted', '#a6aebd'),
+        accent: themeVar('--accent-strong', '#74dcc6'),
+        line: 'rgba(255,255,255,0.08)'
+      };
+      const font = (weight, size) => `${weight} ${size}px -apple-system, system-ui, "Segoe UI", Roboto, sans-serif`;
+
+      // Same grouping as the on-screen log: by day, newest first
+      const entries = [...state.entries].sort((a, b) => b.ts - a.ts);
+      const groups = {};
+      for (const e of entries) { const k = dayKey(e.ts); if (!groups[k]) groups[k] = []; groups[k].push(e); }
+      const days = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
+
+      // Totals per drug for the bottom of the image (one line per drug,
+      // listed in the same order the drugs appear in the log)
+      const totalDrugs = [];
+      const seenDrugIds = new Set();
+      for (const e of entries) {
+        if (seenDrugIds.has(e.drugId)) continue;
+        seenDrugIds.add(e.drugId);
+        totalDrugs.push({
+          name: lookupDrugName(e.drugId) || e.drugNameAtEntry || 'Drug',
+          color: colorForEntry(e) || '#56c1ab',
+          label: totalsForDrugLabel(e.drugId)
+        });
+      }
+
+      // Layout maths (logical pixels; drawn at 2x for sharpness)
+      const W = 440, PAD = 26, HEADER_H = 64, DAY_H = 34, ROW_H = 40, DAY_GAP = 8;
+      let H = PAD + HEADER_H;
+      for (const dk of days) H += DAY_H + groups[dk].length * ROW_H + DAY_GAP;
+      H += DAY_H + totalDrugs.length * ROW_H + PAD;
+
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = W * scale;
+      canvas.height = H * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.textBaseline = 'middle';
+
+      // Background
+      ctx.fillStyle = COL.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Header: capsule emblem, title, and when this snapshot was shared
+      drawCapsuleGlyph(ctx, PAD + 11, PAD + 19, 26, themeVar('--accent', '#56c1ab'));
+      ctx.fillStyle = COL.text;
+      ctx.font = font(700, 19);
+      ctx.fillText('DoseTracker', PAD + 32, PAD + 10);
+      ctx.fillStyle = COL.muted;
+      ctx.font = font(400, 12.5);
+      ctx.fillText(`Dose log — shared ${dateLabel(new Date())} ${timeStr(new Date())}`, PAD + 32, PAD + 30);
+
+      // Right-hand column: times. Measure the widest so doses align next to it.
+      ctx.font = font(500, 13);
+      let timeColW = 0;
+      for (const e of entries) timeColW = Math.max(timeColW, ctx.measureText(timeStr(e.ts)).width);
+
+      let y = PAD + HEADER_H;
+      for (const dk of days) {
+        // Day label (width varies by language, so measure before drawing the line)
+        const d = new Date(dk + 'T00:00:00');
+        ctx.fillStyle = COL.accent;
+        ctx.font = font(700, 12.5);
+        const dayText = dateLabel(d);
+        ctx.fillText(dayText, PAD, y + DAY_H / 2);
+        const dayTextW = ctx.measureText(dayText).width;
+        ctx.strokeStyle = COL.line;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(PAD + dayTextW + 10, y + DAY_H / 2);
+        ctx.lineTo(W - PAD, y + DAY_H / 2);
+        ctx.stroke();
+        y += DAY_H;
+
+        for (const e of groups[dk]) {
+          const cy = y + ROW_H / 2;
+
+          // Colour dot + drug name (left)
+          const dotColor = colorForEntry(e) || '#56c1ab';
+          ctx.fillStyle = dotColor;
+          ctx.beginPath();
+          ctx.arc(PAD + 5, cy, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Time (far right)
+          ctx.fillStyle = COL.muted;
+          ctx.font = font(500, 13);
+          const tText = timeStr(e.ts);
+          ctx.fillText(tText, W - PAD - ctx.measureText(tText).width, cy);
+
+          // Dose (right-aligned, before the time column)
+          ctx.fillStyle = COL.text;
+          ctx.font = font(600, 14);
+          const doseText = e.dosageText || '';
+          const doseX = W - PAD - timeColW - 16;
+          ctx.fillText(doseText, doseX - ctx.measureText(doseText).width, cy);
+
+          // Name, shortened if it would collide with the dose
+          ctx.font = font(600, 14.5);
+          const name = lookupDrugName(e.drugId) || e.drugNameAtEntry || 'Drug';
+          const nameMaxW = doseX - ctx.measureText(doseText).width - (PAD + 18) - 12;
+          ctx.fillText(ellipsize(ctx, name, Math.max(nameMaxW, 40)), PAD + 18, cy);
+
+          y += ROW_H;
+        }
+        y += DAY_GAP;
+      }
+
+      // Totals section: styled like a day section, one row per drug with
+      // its overall sum (per unit) across the whole log
+      ctx.fillStyle = COL.accent;
+      ctx.font = font(700, 12.5);
+      const totalsTitle = 'Total taken';
+      ctx.fillText(totalsTitle, PAD, y + DAY_H / 2);
+      const totalsTitleW = ctx.measureText(totalsTitle).width;
+      ctx.strokeStyle = COL.line;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD + totalsTitleW + 10, y + DAY_H / 2);
+      ctx.lineTo(W - PAD, y + DAY_H / 2);
+      ctx.stroke();
+      y += DAY_H;
+
+      for (const t of totalDrugs) {
+        const cy = y + ROW_H / 2;
+
+        ctx.fillStyle = t.color;
+        ctx.beginPath();
+        ctx.arc(PAD + 5, cy, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Total (far right)
+        ctx.fillStyle = COL.text;
+        ctx.font = font(700, 14);
+        const totW = ctx.measureText(t.label).width;
+        ctx.fillText(t.label, W - PAD - totW, cy);
+
+        // Name, shortened if it would collide with the total
+        ctx.font = font(600, 14.5);
+        const nameMaxW = (W - PAD - totW) - (PAD + 18) - 12;
+        ctx.fillText(ellipsize(ctx, t.name, Math.max(nameMaxW, 40)), PAD + 18, cy);
+
+        y += ROW_H;
+      }
+
+      return canvas;
+    }
+
+    // --- Rendering ---
+    const grid = $('#drug-grid');
+    const logBody = $('#log-body');
+
+    function render() {
+      renderDrugs(); renderLog(); updateLastDoseLabels(); syncEditingClass();
+      // Redrawing replaces the input the pad was typing into — put it away
+      if (padTarget && !document.body.contains(padTarget)) closeNumpad();
+    }
+
+    function renderDrugs() {
+      grid.innerHTML = '';
+
+      // Friendly empty state when there are no drugs yet
+      if (!state.drugs.length) {
+        const empty = document.createElement('div');
+        empty.className = 'grid-empty';
+        empty.innerHTML = 'Nothing tracked yet.<br>Tap <strong>+ Add substance</strong> to create your first card.';
+        grid.appendChild(empty);
+        return;
+      }
+
+      // SORTING: Last dose time descending
+      const sortedDrugs = [...state.drugs].sort((a, b) => {
+        const lastA = lastDoseDate(a.id) || 0;
+        const lastB = lastDoseDate(b.id) || 0;
+        if (lastA === 0 && lastB === 0) return 0;
+        return lastB - lastA; // Recent first
+      });
+
+      sortedDrugs.forEach((drug) => {
+        const card = document.createElement('div');
+        card.className = `card ${drug.expanded ? '' : 'collapsed'}`;
+        card.dataset.id = drug.id;
+        card.onclick = (e) => {
+           // Prevent collapsing if clicking inputs, buttons, menus, OR the name field
+           if (e.target.closest('input, select, button, .color-picker')) return;
+           drug.expanded = !drug.expanded;
+           saveState();
+           // Toggle the class directly (instead of re-rendering everything) so
+           // the open/close animation can play. Sort order doesn't change here.
+           card.classList.toggle('collapsed', !drug.expanded);
+        };
+
+        const strip = document.createElement('div');
+        strip.className = 'color-strip';
+        strip.style.background = drug.color;
+        card.appendChild(strip);
+
+        // Echo the drug's colour on the whole card: a tinted border plus a
+        // very faint wash of the same colour fading down from the top edge.
+        card.style.borderColor = hexToRgba(drug.color, 0.28);
+        card.style.background =
+          `linear-gradient(180deg, ${hexToRgba(drug.color, 0.06)} 0%, rgba(0,0,0,0) 96px), ` +
+          `linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%)`;
+
+        // -- Card Header --
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'card-header';
+
+        const topRow = document.createElement('div');
+        topRow.className = 'card-top-row';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        // Class and label avoid the word "name" so iOS doesn't offer
+        // "AutoFill Contact" when typing a drug title
+        nameInput.className = 'drug-title';
+        nameInput.value = drug.name;
+        nameInput.dataset.prev = drug.name;
+        // "next" because the flow continues into the amount field
+        nameInput.setAttribute('enterkeyhint', 'next');
+        nameInput.setAttribute('aria-label', 'Substance');
+
+        // Disable autofill/autocorrect
+        nameInput.setAttribute('autocomplete', 'off');
+        nameInput.setAttribute('autocorrect', 'off');
+        nameInput.setAttribute('autocapitalize', 'off');
+        nameInput.setAttribute('spellcheck', 'false');
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'card-actions';
+
+        // Repeat Last Button
+        const lastEntry = getLastEntry(drug.id);
+        if (lastEntry) {
+          const repeatBtn = document.createElement('button');
+          repeatBtn.className = 'btn-sm repeat-btn';
+          repeatBtn.textContent = 'Repeat Last Dose';
+          repeatBtn.title = `Add ${displayValueUnit(lastEntry.value, lastEntry.unit)} (same as last)`;
+          repeatBtn.onclick = (e) => {
+            e.stopPropagation();
+            addEntryStandard(drug.id, drug.name, null, null, drug.color, lastEntry.value, lastEntry.unitRaw);
+          };
+          actionsDiv.appendChild(repeatBtn);
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-sm remove';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = (e) => {
+          e.stopPropagation();
+          // Remove right away; the toast offers a few seconds to undo.
+          const idx = state.drugs.findIndex(d => d.id === drug.id);
+          if (idx < 0) return;
+          const removed = state.drugs[idx];
+          state.drugs.splice(idx, 1);
+          saveState(); render();
+          showToast(`Removed ${removed.name || 'substance'}.`, 6000, 'Undo', () => {
+            state.drugs.splice(Math.min(idx, state.drugs.length), 0, removed);
+            saveState(); render();
+          });
+        };
+        actionsDiv.appendChild(removeBtn);
+
+        topRow.appendChild(nameInput);
+        topRow.appendChild(actionsDiv);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.id = `meta-${drug.id}`;
+
+        // "Since last dose" is the headline number — for pacing yourself,
+        // when you last dosed matters more than the running total.
+        const lastBlock = document.createElement('div');
+        lastBlock.className = 'meta-block';
+        const lastLabel = document.createElement('span');
+        lastLabel.className = 'meta-label';
+        lastLabel.textContent = 'Last dose';
+        const lastSpan = document.createElement('span');
+        lastSpan.className = 'last';
+        lastSpan.id = `last-${drug.id}`;
+        lastSpan.textContent = '—';
+        lastBlock.appendChild(lastLabel);
+        lastBlock.appendChild(lastSpan);
+
+        const totalBlock = document.createElement('div');
+        totalBlock.className = 'meta-block';
+        const totalLabel = document.createElement('span');
+        totalLabel.className = 'meta-label';
+        totalLabel.textContent = 'Total';
+        const totalSpan = document.createElement('span');
+        totalSpan.className = 'total';
+        totalSpan.id = `meta-total-${drug.id}`;
+        totalSpan.textContent = totalsForDrugLabel(drug.id);
+        totalBlock.appendChild(totalLabel);
+        totalBlock.appendChild(totalSpan);
+
+        meta.appendChild(lastBlock);
+        meta.appendChild(totalBlock);
+
+        const nameErr = document.createElement('div');
+        nameErr.className = 'name-error';
+        nameErr.textContent = 'Name already exists.';
+
+        headerDiv.appendChild(topRow);
+        headerDiv.appendChild(nameErr);
+        headerDiv.appendChild(meta);
+        card.appendChild(headerDiv);
+
+        // -- Card Body (collapsible; the wrapper makes the animation work) --
+        const collapseWrap = document.createElement('div');
+        collapseWrap.className = 'card-collapse';
+        const bodyDiv = document.createElement('div');
+        bodyDiv.className = 'card-body';
+
+        // Dose Inputs
+        const doseRow = document.createElement('div');
+        doseRow.className = 'dose-grid';
+
+        const numInput = document.createElement('input');
+        // type=text so both "1.5" and "1,5" work in every locale
+        numInput.type = 'text';
+        numInput.setAttribute('autocomplete', 'off');
+        numInput.setAttribute('aria-label', 'Dose amount');
+        numInput.placeholder = 'Amount';
+
+        const unitSelect = document.createElement('select');
+        unitSelect.setAttribute('aria-label', 'Unit');
+        for (const u of UNIT_OPTIONS) {
+          const opt = document.createElement('option');
+          opt.value = u.value; opt.textContent = u.label; unitSelect.appendChild(opt);
+        }
+        unitSelect.value = drug.lastUnit || 'mg';
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-btn';
+        addBtn.textContent = 'Add';
+
+        const onAdd = () => addEntryStandard(drug.id, drug.name, numInput, unitSelect, drug.color);
+        addBtn.addEventListener('click', (e) => { e.stopPropagation(); onAdd(); });
+        numInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } });
+        useNumpad(numInput, 'Add', onAdd);
+
+        doseRow.appendChild(numInput);
+        doseRow.appendChild(unitSelect);
+        doseRow.appendChild(addBtn);
+
+        // Name Editing Logic
+        nameInput.addEventListener('click', (e) => { e.stopPropagation(); }); // Prevent collapse
+        nameInput.addEventListener('focus', () => {
+            nameInput.dataset.prev = drug.name;
+            nameInput.select(); // Auto-select all text for easy overwrite
+        });
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              // Jump straight to the amount field; this blurs the name
+              // (saving it) and our own number pad opens right away
+              numInput.focus();
+            }
+        });
+        nameInput.addEventListener('input', () => {
+          const proposed = nameInput.value.trim();
+          const dup = state.drugs.some(d => d.id !== drug.id && nameKey(d.name) === nameKey(proposed));
+          if (dup) { nameInput.classList.add('invalid'); nameErr.style.display = 'block'; }
+          else { nameInput.classList.remove('invalid'); nameErr.style.display = 'none'; }
+
+          // Smart Unit Detection
+          const low = proposed.toLowerCase();
+          let autoUnit = null;
+
+          // "Start with" logic
+          const linePrefixes = ["amph", "speed", "k ", "ket", "cocaine", "coke", "meph", "3m", "4m"];
+          if (linePrefixes.some(p => low.startsWith(p.toLowerCase()))) {
+            autoUnit = 'line';
+          } else if (low.includes('lsd')) {
+            autoUnit = 'µg';
+          } else if (low.includes('shroom')) {
+            autoUnit = 'g';
+          }
+
+          if (autoUnit) {
+            unitSelect.value = autoUnit;
+          }
+        });
+        nameInput.addEventListener('blur', () => {
+          const proposed = nameInput.value.trim();
+          const prev = nameInput.dataset.prev || drug.name;
+          const isEmpty = proposed.length === 0;
+          const dup = state.drugs.some(d => d.id !== drug.id && nameKey(d.name) === nameKey(proposed));
+          if (isEmpty || dup) {
+            nameInput.value = prev;
+            nameInput.classList.remove('invalid');
+            nameErr.style.display = dup ? 'block' : 'none';
+            setTimeout(() => { nameErr.style.display = 'none'; }, 2000);
+            return;
+          }
+          drug.name = proposed;
+          saveState();
+        });
+
+        // Color Picker
+        const colorWrap = document.createElement('div');
+        colorWrap.className = 'color-picker';
+        const colorLabel = document.createElement('label');
+        colorLabel.textContent = 'Color:';
+
+        const colorBtn = document.createElement('button');
+        colorBtn.type = 'button';
+        colorBtn.className = 'color-select-btn';
+        colorBtn.style.setProperty('--swatch', drug.color);
+        const colorName = paletteNames[palette.indexOf(drug.color)] || 'Color';
+        colorBtn.innerHTML = `<span class="swatch"></span><span class="label">${colorName}</span>`;
+        colorBtn.setAttribute('aria-haspopup', 'listbox');
+        colorBtn.setAttribute('aria-expanded', 'false');
+
+        const menu = document.createElement('div');
+        menu.className = 'color-menu';
+        menu.setAttribute('role', 'listbox');
+
+        palette.forEach((hex, i) => {
+          const opt = document.createElement('div');
+          opt.className = 'color-option';
+          opt.setAttribute('role', 'option');
+          opt.innerHTML = `<span class="swatch" style="--swatch:${hex}"></span><span class="label">${paletteNames[i]}</span>`;
+          if (hex === drug.color) opt.setAttribute('aria-selected', 'true');
+
+          const onPick = (ev) => {
+            ev?.stopPropagation(); ev?.preventDefault();
+            drug.color = hex;
+            colorBtn.style.setProperty('--swatch', hex);
+            colorBtn.querySelector('.label').textContent = paletteNames[i];
+            saveState();
+            render(); // Full render to update colors in log
+            colorWrap.classList.remove('open');
+            colorBtn.setAttribute('aria-expanded', 'false');
+          };
+          opt.addEventListener('click', onPick);
+          menu.appendChild(opt);
+        });
+
+        // Place the floating menu just below the button, flipping above or
+        // nudging sideways if it would run off the edge of the screen.
+        const positionMenu = () => {
+          const r = colorBtn.getBoundingClientRect();
+          const gap = 6, pad = 8;
+          const mw = menu.offsetWidth, mh = menu.offsetHeight;
+          let top = r.bottom + gap;
+          if (top + mh > window.innerHeight - pad && r.top - gap - mh > pad) {
+            top = r.top - gap - mh;
+          }
+          let left = Math.min(r.left, window.innerWidth - pad - mw);
+          left = Math.max(pad, left);
+          menu.style.top = top + 'px';
+          menu.style.left = left + 'px';
+        };
+        colorWrap._reposition = positionMenu; // global scroll/resize handlers use this
+
+        colorBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = colorWrap.classList.toggle('open');
+          colorBtn.setAttribute('aria-expanded', String(isOpen));
+          if (isOpen) positionMenu();
+        });
+
+        colorWrap.appendChild(colorLabel);
+        colorWrap.appendChild(colorBtn);
+        colorWrap.appendChild(menu);
+
+        bodyDiv.appendChild(doseRow);
+        bodyDiv.appendChild(colorWrap);
+
+        collapseWrap.appendChild(bodyDiv);
+        card.appendChild(collapseWrap);
+        grid.appendChild(card);
+      });
+    }
+
+    document.addEventListener('click', () => { $$('.color-picker.open').forEach(el => el.classList.remove('open')); });
+    // Keep any open floating color menu anchored to its button while scrolling/resizing.
+    const repositionOpenMenus = () => { $$('.color-picker.open').forEach(el => el._reposition && el._reposition()); };
+    window.addEventListener('scroll', repositionOpenMenus, true);
+    window.addEventListener('resize', repositionOpenMenus);
+
+    function renderLog() {
+      // One flat list, newest first. The app is designed around a single
+      // night at a time (the welcome-back prompt offers a fresh start), so
+      // there are no day-separator rows.
+      const entries = [...state.entries].sort((a,b) => b.ts - a.ts);
+      logBody.innerHTML = '';
+      if (!entries.length) {
+        logBody.innerHTML = '<tr class="empty-row"><td colspan="4">No doses logged yet — add one above to get started.</td></tr>';
+        return;
+      }
+
+      const todayKey = dayKey(new Date());
+      {
+        for (const e of entries) {
+          const tr = document.createElement('tr');
+          tr.dataset.entryId = e.id;
+
+          const tdDrug = document.createElement('td');
+          const chip = document.createElement('span');
+          chip.className = 'drug-chip';
+          const bg = colorForEntry(e) || '#56c1ab';
+          chip.style.background = hexToRgba(bg, 0.16);
+          chip.style.borderColor = hexToRgba(bg, 0.38);
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = lookupDrugName(e.drugId) || e.drugNameAtEntry || 'Drug';
+          chip.appendChild(nameSpan);
+          tdDrug.appendChild(chip);
+
+          const tdDose = document.createElement('td');
+          tdDose.className = 'dose-cell';
+          const tdTimeCell = document.createElement('td');
+          tdTimeCell.className = 'time-cell';
+
+          if (editingId === e.id) {
+            const amountInput = document.createElement('input');
+            // type=text so both "1.5" and "1,5" work in every locale
+            amountInput.type = 'text';
+            amountInput.className = 'edit-input';
+            amountInput.id = `edit-num-${e.id}`;
+            amountInput.value = (e.value != null && isFinite(e.value)) ? e.value : '';
+            useNumpad(amountInput, 'Save', () => saveEdit(e.id));
+
+            const unitSelect = document.createElement('select');
+            unitSelect.id = `edit-unit-${e.id}`;
+            for (const u of UNIT_OPTIONS) { const opt = document.createElement('option'); opt.value = u.value; opt.textContent = u.label; unitSelect.appendChild(opt); }
+            unitSelect.value = e.unitRaw || e.unit || 'mg';
+
+            const dtInput = document.createElement('input');
+            dtInput.type = 'time';
+            dtInput.id = `edit-time-${e.id}`;
+            dtInput.className = 'edit-input';
+            dtInput.value = formatAsTime(e.ts);
+            dtInput.setAttribute('enterkeyhint', 'done');
+
+            const enterSave = (ev) => {
+                if (ev.key === 'Enter' || ev.keyCode === 13) {
+                    ev.preventDefault();
+                    saveEdit(e.id);
+                }
+            };
+            amountInput.addEventListener('keydown', enterSave);
+            unitSelect.addEventListener('keydown', enterSave);
+            dtInput.addEventListener('keydown', enterSave);
+
+            const amtWrap = document.createElement('div');
+            amtWrap.className = 'edit-amount-grid';
+            amtWrap.appendChild(amountInput);
+            amtWrap.appendChild(unitSelect);
+            tdDose.appendChild(amtWrap);
+            tdTimeCell.appendChild(dtInput);
+          } else {
+            tdDose.textContent = e.dosageText;
+            // Older entries (kept past a night) get their date so times
+            // can't be mistaken for tonight's
+            tdTimeCell.textContent = (dayKey(e.ts) === todayKey)
+              ? timeStr(e.ts)
+              : `${dateLabel(e.ts)}, ${timeStr(e.ts)}`;
+          }
+
+          const tdActions = document.createElement('td');
+          tdActions.className = 'row-actions';
+
+          if (editingId === e.id) {
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'icon-btn';
+            saveBtn.type = 'button';
+            saveBtn.textContent = '✔';
+            saveBtn.title = 'Save';
+            saveBtn.addEventListener('touchstart', (ev) => { ev.preventDefault(); saveEdit(e.id); });
+            saveBtn.addEventListener('click', () => saveEdit(e.id));
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'icon-btn';
+            cancelBtn.type = 'button';
+            cancelBtn.textContent = '✕';
+            cancelBtn.title = 'Cancel';
+            cancelBtn.addEventListener('click', cancelEdit);
+
+            tdActions.appendChild(saveBtn);
+            tdActions.appendChild(cancelBtn);
+          } else {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'icon-btn';
+            editBtn.type = 'button';
+            editBtn.textContent = '✎';
+            editBtn.title = 'Edit';
+            editBtn.dataset.action = 'edit-entry';
+            editBtn.dataset.entryId = e.id;
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'icon-btn icon-danger';
+            delBtn.type = 'button';
+            delBtn.textContent = '×';
+            delBtn.title = 'Remove this entry';
+            delBtn.dataset.action = 'remove-entry';
+            delBtn.dataset.entryId = e.id;
+
+            tdActions.appendChild(editBtn);
+            tdActions.appendChild(delBtn);
+          }
+
+          tr.appendChild(tdDrug);
+          tr.appendChild(tdDose);
+          tr.appendChild(tdTimeCell);
+          tr.appendChild(tdActions);
+          logBody.appendChild(tr);
+        }
+      }
+
+      state.drugs.forEach(d => {
+        const totalEl = document.getElementById(`meta-total-${d.id}`);
+        if (totalEl) totalEl.textContent = totalsForDrugLabel(d.id);
+      });
+    }
+
+    function lookupDrugName(id) { return state.drugs.find(d => d.id === id)?.name || null; }
+    function lookupDrugColor(id) { return state.drugs.find(d => d.id === id)?.color || null; }
+    function colorForEntry(e) {
+      // Fall back to the color saved on the entry so logs for a deleted drug keep their dot.
+      return lookupDrugColor(e.drugId) || colorForName(lookupDrugName(e.drugId) || e.drugNameAtEntry) || e.colorAtEntry;
+    }
+    function colorForName(name) {
+      if (!name) return null;
+      const live = state.drugs.find(d => nameKey(d.name) === nameKey(name));
+      if (live) return live.color;
+      return null;
+    }
+
+    function totalsForDrugLabel(drugId) {
+      const units = new Map();
+      for (const e of state.entries) {
+        if (e.drugId !== drugId) continue;
+        if (e.value == null || !isFinite(e.value)) continue;
+        const u = normalizeUnit(e.unit || '');
+        units.set(u, (units.get(u) || 0) + e.value);
+      }
+      if (!units.size) return '—';
+      const parts = [];
+      for (const [unit, sum] of units.entries()) { parts.push(displayValueUnit(sum, unit)); }
+      return parts.join(' • ');
+    }
+
+    function formatSinceLabel(date) {
+      if (!date || isNaN(date)) return '—';
+      const now = new Date();
+      let diffMin = Math.floor((now - date) / 60000);
+      const inFuture = diffMin < 0;
+      if (inFuture) diffMin = Math.abs(diffMin);
+      if (diffMin < 1) return inFuture ? 'in <1m' : 'just now';
+      if (diffMin < 60) return `${diffMin}min ${inFuture ? '' : 'ago'}`.trim();
+      const hours = Math.floor(diffMin / 60);
+      const mins = diffMin % 60;
+      if (diffMin < 1440) return `${hours}h ${mins}min ${inFuture ? '' : 'ago'}`.trim();
+      const days = Math.floor(hours / 24);
+      const remH = hours % 24;
+      return `${days}d ${remH}h ${inFuture ? '' : 'ago'}`.trim();
+    }
+
+    function updateLastDoseLabels() {
+      state.drugs.forEach(d => {
+        const el = document.getElementById(`last-${d.id}`);
+        if (!el) return;
+        const last = lastDoseDate(d.id);
+        el.textContent = formatSinceLabel(last);
+        // Tint the timer while the last dose is under an hour old
+        el.classList.toggle('recent', !!last && !isNaN(last) && (Date.now() - last) < 3600000);
+      });
+    }
+
+    // --- Actions ---
+    function addEntryStandard(drugId, currentDrugName, numInput, unitSelect, colorAtEntry, explicitValue, explicitUnitRaw) {
+      let value, unitRaw;
+
+      if (explicitValue !== undefined) {
+        // Repeat Last path
+        value = explicitValue;
+        unitRaw = explicitUnitRaw;
+      } else {
+        // Manual input path
+        const raw = numInput.value.replace(',', '.'); // Handle comma decimals
+        value = parseFloat(raw);
+        if (!raw || !isFinite(value) || value <= 0) {
+          showToast('Enter a positive amount.');
+          if (numInput) {
+            numInput.focus();
+            numInput.style.boxShadow = '0 0 0 3px rgba(239, 110, 102, 0.4)';
+            setTimeout(() => (numInput.style.boxShadow = ''), 300);
+          }
+          return;
+        }
+        unitRaw = unitSelect.value;
+      }
+
+      const unitNorm = normalizeUnit(unitRaw);
+      const ts = new Date();
+      const dosageText = displayValueUnit(value, unitRaw);
+      const entry = { id: uid('e'), ts, drugId, drugNameAtEntry: currentDrugName, dosageText, value, unit: unitNorm, unitRaw, colorAtEntry };
+      state.entries.push(entry);
+
+      const drug = state.drugs.find(d => d.id === drugId);
+      if (drug) {
+        drug.lastUnit = unitRaw;
+        drug.expanded = false; // AUTO-COLLAPSE
+      }
+
+      saveState();
+
+      if (numInput) numInput.value = '';
+      render();
+      showToast(`Added ${dosageText} of ${currentDrugName}`);
+    }
+
+    function startEdit(entryId) { editingId = entryId; render(); const inp = document.getElementById(`edit-num-${entryId}`); if (inp) inp.focus(); }
+
+    function saveEdit(entryId) {
+      const amountEl = document.getElementById(`edit-num-${entryId}`);
+      const unitEl = document.getElementById(`edit-unit-${entryId}`);
+      const timeEl = document.getElementById(`edit-time-${entryId}`);
+      const e = state.entries.find(x => x.id === entryId);
+      if (!e || !amountEl || !unitEl || !timeEl) return;
+
+      const amountRaw = amountEl.value.replace(',', '.'); // Handle comma decimals
+      const value = parseFloat(amountRaw);
+      if (!amountEl.value || !isFinite(value) || value <= 0) {
+        showToast('Enter a positive amount.');
+        amountEl.focus();
+        return;
+      }
+      const unitRaw = unitEl.value;
+
+      // Handle Time Only Edit (preserve original date)
+      let newDate = new Date(e.ts);
+      if (timeEl && timeEl.value) {
+        const [hh, mm] = timeEl.value.split(':').map(Number);
+        if (!isNaN(hh) && !isNaN(mm)) {
+            newDate.setHours(hh);
+            newDate.setMinutes(mm);
+        }
+      }
+
+      e.value = value;
+      e.unit = normalizeUnit(unitRaw);
+      e.unitRaw = unitRaw;
+      e.dosageText = displayValueUnit(value, unitRaw);
+      e.ts = newDate;
+
+      const d = state.drugs.find(d => d.id === e.drugId);
+      if (d) d.lastUnit = unitRaw;
+
+      editingId = null;
+      saveState();
+      render();
+    }
+
+    function cancelEdit() { editingId = null; render(); }
+
+    let editingId = null;
+    function syncEditingClass() { document.body.classList.toggle('editing', !!editingId); }
+
+    // Event delegation
+    document.addEventListener('click', async (e) => {
+      if (e.target && e.target.id === 'clear-log') {
+        if (!state.entries.length) return;
+        // Clears right away — the toast offers a few seconds to undo
+        const backup = state.entries;
+        state.entries = [];
+        saveState();
+        render();
+        showToast('Log cleared.', 6000, 'Undo', () => {
+          state.entries = backup;
+          saveState();
+          render();
+        });
+      }
+
+      if (e.target && e.target.id === 'add-med') {
+        let i = state.drugs.length + 1; let base = 'Drug '; let candidate = base + i; const names = new Set(state.drugs.map(d => nameKey(d.name)));
+        while (names.has(nameKey(candidate))) { i++; candidate = base + i; }
+        const color = palette[state.drugs.length % palette.length];
+        const newId = uid('drug');
+        state.drugs.push({ id: newId, name: candidate, color, expanded: true });
+        saveState();
+        render();
+
+        // Focus the name field IMMEDIATELY — still inside the tap itself.
+        // Phones only open the keyboard for a focus that happens during a
+        // real user tap; even a tiny delay and iOS keeps the keyboard shut.
+        const card = document.querySelector(`[data-id="${newId}"]`);
+        const newNameInput = card ? card.querySelector('.drug-title') : null;
+        if (newNameInput) {
+          newNameInput.focus();
+          newNameInput.select();
+          // Scrolling can wait until the keyboard starts sliding up
+          setTimeout(() => {
+            newNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 60);
+        }
+      }
+
+      const actionBtn = e.target.closest('[data-action]');
+      if (actionBtn) {
+        const action = actionBtn.dataset.action;
+        const id = actionBtn.dataset.entryId;
+        if (action === 'remove-entry') {
+          // Removes right away — the toast offers a few seconds to undo
+          const idx = state.entries.findIndex(x => x.id === id);
+          if (idx >= 0) {
+            const removed = state.entries[idx];
+            state.entries.splice(idx, 1);
+            saveState();
+            render();
+            showToast('Entry removed.', 6000, 'Undo', () => {
+              state.entries.push(removed); // sort order is by time, so position restores itself
+              saveState();
+              render();
+            });
+          }
+        }
+        if (action === 'edit-entry') startEdit(id);
+      }
+    });
+
+    // Privacy modal controls
+    const privacyOverlay = $('#privacy');
+    const privacyOpen = $('#privacy-open');
+    const privacyClose = $('#privacy-close');
+    privacyOpen.addEventListener('click', (e) => {
+      e.preventDefault();
+      privacyOverlay.style.display = 'flex';
+      privacyOverlay.classList.add('show');
+      privacyClose.focus();
+    });
+    privacyClose.addEventListener('click', () => { privacyOverlay.classList.remove('show'); privacyOverlay.style.display='none'; });
+    privacyOverlay.addEventListener('click', (e) => { if (e.target === privacyOverlay) { privacyOverlay.classList.remove('show'); privacyOverlay.style.display='none'; } });
+    document.addEventListener('keydown', (e) => {
+      if (privacyOverlay.classList.contains('show') && e.key === 'Escape') {
+        e.preventDefault();
+        privacyOverlay.classList.remove('show');
+        privacyOverlay.style.display='none';
+      }
+    });
+
+    setInterval(updateLastDoseLabels, 60000);
+
+    try { render(); } catch(e) { console.error("Initial render failed", e); }
+
+    // =====================================================================
+    // Welcome-back prompt: the app is meant for one night at a time. If the
+    // newest log entry is older than 12 hours when the app opens, offer a
+    // fresh start. Nothing is deleted without the user choosing it, and
+    // "Start fresh" can be undone from the toast for a few seconds.
+    // =====================================================================
+    (function setupFreshStart() {
+      const STALE_MS = 12 * 60 * 60 * 1000;
+      if (!state.entries.length) return;
+      let newest = null;
+      for (const e of state.entries) {
+        if (!e.ts || isNaN(e.ts)) continue;
+        if (!newest || e.ts > newest) newest = e.ts;
+      }
+      if (!newest || (Date.now() - newest) < STALE_MS) return;
+
+      const overlay = $('#fresh-start');
+      const keepBtn = $('#fresh-keep');
+      const clearBtn = $('#fresh-clear');
+      $('#fresh-msg').textContent =
+        `Your log still has entries from a previous night (last dose ${formatSinceLabel(newest)}). Start fresh, or keep them?`;
+
+      function close() {
+        overlay.classList.remove('show');
+        overlay.style.display = 'none';
+      }
+
+      keepBtn.addEventListener('click', close);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      document.addEventListener('keydown', (e) => {
+        if (overlay.classList.contains('show') && e.key === 'Escape') { e.preventDefault(); close(); }
+      });
+      clearBtn.addEventListener('click', () => {
+        const backup = state.entries;
+        state.entries = [];
+        saveState();
+        render();
+        close();
+        showToast('Log cleared — have a good night.', 6000, 'Undo', () => {
+          state.entries = backup;
+          saveState();
+          render();
+        });
+      });
+
+      overlay.style.display = 'flex';
+      overlay.classList.add('show');
+      keepBtn.focus({ preventScroll: true });
+    })();
+
+    // =====================================================================
+    // PWA: service worker, iOS install hint, persistent-storage request
+    // =====================================================================
+
+    // Register the service worker (./sw.js) — it caches the app so it loads
+    // instantly and works with no internet at all.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+
+    // Ask the browser to protect our saved data from automatic clean-up.
+    // Done on the first tap/click because browsers like the request to come
+    // from a real user interaction. Harmless if unsupported.
+    window.addEventListener('pointerdown', () => {
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(() => {});
+      }
+    }, { once: true });
+
+    // iOS install hint: iPhones/iPads have no automatic "install app" prompt,
+    // so we show a small one-time tip in Safari explaining how to do it.
+    (function setupInstallHint() {
+      const HINT_DISMISSED_KEY = 'med_tracker_install_hint_dismissed';
+      const hint = $('#install-hint');
+      const closeBtn = $('#install-hint-close');
+
+      const ua = navigator.userAgent;
+      // iPadOS pretends to be a Mac, hence the maxTouchPoints check
+      const isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      // Real Safari (not Chrome/Firefox/Edge on iOS, which can't install PWAs)
+      const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome/i.test(ua);
+      // Already running as an installed app?
+      const isStandalone = navigator.standalone === true ||
+                           window.matchMedia('(display-mode: standalone)').matches;
+
+      let dismissed = false;
+      try { dismissed = localStorage.getItem(HINT_DISMISSED_KEY) === '1'; } catch {}
+
+      // Skip on the very first visit: the welcome screen already explains
+      // how to install, so the banner would just repeat it.
+      let welcomeSeenBefore = false;
+      try { welcomeSeenBefore = localStorage.getItem('med_tracker_welcome_seen') === '1'; } catch {}
+
+      if (!isIOS || !isSafari || isStandalone || dismissed || !welcomeSeenBefore) return;
+
+      hint.hidden = false;
+      closeBtn.addEventListener('click', () => {
+        hint.hidden = true;
+        try { localStorage.setItem(HINT_DISMISSED_KEY, '1'); } catch {}
+      });
+    })();
+
+    // =====================================================================
+    // Welcome screen: introduces the app on the very first visit and shows
+    // how to install it. Reopen any time from the Information dialog.
+    // =====================================================================
+
+    // Chrome on Android announces when the app can be installed directly;
+    // we hold on to that so the welcome screen can offer a real Install button
+    // instead of written steps.
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = $('#welcome-install-btn');
+      const steps = $('#welcome-steps');
+      if (btn) { btn.hidden = false; steps.hidden = true; }
+    });
+
+    (function setupWelcome() {
+      const WELCOME_KEY = 'med_tracker_welcome_seen';
+      const overlay = $('#welcome');
+      const startBtn = $('#welcome-start');
+      const installSection = $('#welcome-install');
+      const stepsList = $('#welcome-steps');
+      const installBtn = $('#welcome-install-btn');
+      const againBtn = $('#welcome-again');
+
+      const ua = navigator.userAgent;
+      const isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isIOSSafari = isIOS && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome/i.test(ua);
+      const isAndroid = /Android/i.test(ua);
+      const isStandalone = navigator.standalone === true ||
+                           window.matchMedia('(display-mode: standalone)').matches;
+
+      // Show only the install instructions that fit this phone/browser
+      if (isStandalone) {
+        installSection.hidden = true; // already running as an installed app
+      } else {
+        let steps;
+        if (isIOSSafari) {
+          steps = ['Tap the <b>Share</b> button at the bottom of Safari',
+                   'Scroll down and choose <b>Add to Home Screen</b>',
+                   'Tap <b>Add</b> — the app appears on your home screen'];
+        } else if (isIOS) {
+          steps = ['Open this page in <b>Safari</b> (other browsers can’t install it on iPhone)',
+                   'Tap the <b>Share</b> button, then <b>Add to Home Screen</b>'];
+        } else if (isAndroid) {
+          steps = ['Tap the <b>⋮ menu</b> in the corner of your browser',
+                   'Choose <b>Install app</b> or <b>Add to Home screen</b>'];
+        } else {
+          steps = ['On your phone: visit <b>dosetracker.github.io</b> and add it to your home screen',
+                   'On a computer: in Chrome or Edge, click the install icon at the right end of the address bar'];
+        }
+        stepsList.innerHTML = steps.map((s) => `<li>${s}</li>`).join('');
+      }
+
+      function openWelcome() {
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+        startBtn.focus({ preventScroll: true });
+      }
+      function closeWelcome() {
+        overlay.classList.remove('show');
+        overlay.style.display = 'none';
+        try { localStorage.setItem(WELCOME_KEY, '1'); } catch {}
+      }
+
+      startBtn.addEventListener('click', closeWelcome);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closeWelcome(); });
+      document.addEventListener('keydown', (e) => {
+        if (overlay.classList.contains('show') && e.key === 'Escape') { e.preventDefault(); closeWelcome(); }
+      });
+
+      // Android: trigger the browser's own install dialog
+      installBtn.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        try {
+          const choice = await deferredInstallPrompt.userChoice;
+          if (choice && choice.outcome === 'accepted') installSection.hidden = true;
+        } catch {}
+        deferredInstallPrompt = null;
+        installBtn.hidden = true;
+        stepsList.hidden = false;
+      });
+
+      // "Show welcome & install guide" inside the Information dialog
+      againBtn.addEventListener('click', () => {
+        privacyOverlay.classList.remove('show');
+        privacyOverlay.style.display = 'none';
+        openWelcome();
+      });
+
+      // Open automatically on the very first visit only
+      let seen = false;
+      try { seen = localStorage.getItem(WELCOME_KEY) === '1'; } catch {}
+      if (!seen) openWelcome();
+    })();
+
+  </script>
+</body>
+</html>

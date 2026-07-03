@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- App icon for DoseTracker: a capsule on the app's dark background.
+       The background fills the whole square edge-to-edge so iOS/Android can
+       apply their own rounded-corner masks without dark gaps showing. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d242e"/>
+      <stop offset="1" stop-color="#0f1216"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Capsule glyph (kept in one group so it can be scaled for maskable icons) -->
+  <g id="glyph" transform="rotate(28 256 256)">
+    <!-- Top half: off-white -->
+    <rect x="186" y="104" width="140" height="304" rx="70" fill="#e9ecf2"/>
+    <!-- Bottom half: teal -->
+    <path d="M186 256 h140 v82 a70 70 0 0 1 -140 0 z" fill="#56c1ab"/>
+    <!-- Seam between the two halves -->
+    <rect x="186" y="252" width="140" height="7" fill="#0f1216" opacity="0.30"/>
+    <!-- Soft highlight on the top half -->
+    <rect x="203" y="126" width="22" height="90" rx="11" fill="#ffffff" opacity="0.45"/>
+    <!-- Soft highlight on the teal half -->
+    <rect x="203" y="300" width="22" height="66" rx="11" fill="#ffffff" opacity="0.18"/>
+  </g>
+</svg>
