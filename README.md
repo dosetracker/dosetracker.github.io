@@ -32,11 +32,10 @@ DoseTracker helps you keep track of **what you've taken, how much, and — most 
 
 Your data is nobody's business but yours:
 
-- **No server, no account.** Everything you track lives in your browser's local storage, on your device. Your entries are never uploaded.
+- **No server, no account, no analytics.** Everything lives in your browser's local storage, on your device. Nothing is ever uploaded.
 - **No history hoarding.** The app encourages clearing the log after each night; deletions take effect immediately (with a brief Undo).
-- **Works fully offline.** After the first visit, it loads instantly from your device — nothing to intercept, nothing to log.
+- **Works fully offline.** After the first visit, it loads instantly with no network requests at all — nothing to intercept, nothing to log.
 - Anyone opening the same link gets their own empty copy. Your entries are never visible to anyone else.
-- Full transparency: the only thing the app ever sends is a single anonymous "someone new opened this" count on the very first visit ([GoatCounter](https://www.goatcounter.com/), open source, no cookies, no identifiers), so we can tell whether the app reaches people. Nothing you do or type in the app is ever transmitted.
 
 ## Install it like an app
 

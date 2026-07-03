@@ -12,7 +12,7 @@
    nobody gets stuck on stale code.
    ============================================================================= */
 
-const CACHE_VERSION = 'v17-dosetracker';
+const CACHE_VERSION = 'v18-dosetracker';
 const CACHE_NAME = `med-tracker-${CACHE_VERSION}`;
 
 // Files the app cannot run without. If any of these fail to download,
