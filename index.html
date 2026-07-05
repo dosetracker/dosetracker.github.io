@@ -161,7 +161,7 @@
 
     /* Shared button language: same radius, border, type and press feedback
        for every button in the app. */
-    .toolbar button, .btn, .btn-sm, .add-btn, .controls button, .color-select-btn {
+    .toolbar button, .btn, .btn-sm, .add-btn, .controls button {
       font-family: inherit;
       font-weight: 600;
       border-radius: 999px; /* pill shape — friendlier, more app-like */
@@ -174,11 +174,11 @@
                   transform var(--t-fast) var(--ease);
     }
     .toolbar button { padding: 0 16px; min-height: var(--control-h); font-size: 14px; }
-    .toolbar button:hover, .btn:hover, .btn-sm:hover, .controls button:hover, .color-select-btn:hover {
+    .toolbar button:hover, .btn:hover, .btn-sm:hover, .controls button:hover {
       background: var(--surface-3);
     }
     .toolbar button:active, .btn:active, .btn-sm:active, .add-btn:active,
-    .controls button:active, .color-select-btn:active {
+    .controls button:active {
       transform: scale(0.97);
     }
 
@@ -271,6 +271,7 @@
       padding: 4px 6px; margin: 0 0 0 -6px; flex: 1; min-width: 0;
       background: transparent; border: none; color: var(--text);
       font-family: inherit; border-radius: 8px;
+      position: relative; z-index: 1; /* wins taps where it overlaps the colour dot's hit area */
     }
     input.drug-title:focus {
       outline: none;
@@ -387,43 +388,57 @@
     }
     button.add-btn:hover { background: var(--accent-strong); }
 
-    /* ===== Colour picker ===== */
-    .color-picker { position: relative; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .color-picker label { font-size: 12.5px; color: var(--muted); }
-    .color-select-btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 12px; min-height: 40px; font-size: 13.5px;
+    /* ===== Colour picker =====
+       A small dot in front of the drug title (mirrors the dot in the log).
+       The button's hit area is much larger than the visible dot so it's easy
+       to tap; negative margins keep the visual spacing tight. The title input
+       overlaps the button's right edge and wins taps there (it's raised with
+       z-index below), so tapping the start of the name still edits the name,
+       not the colour. The wrapper must NOT be position:relative — that would
+       paint the button above the title and steal those taps. */
+    .color-picker { display: flex; align-items: center; flex-shrink: 0; }
+    .color-dot-btn {
+      width: 38px; height: 38px;
+      margin: -8px -14px -8px -12px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; padding: 0;
+      border-radius: 999px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
     }
-    .color-select-btn .swatch, .color-option .swatch {
-      width: 13px; height: 13px; border-radius: 999px;
+    .color-dot-btn .swatch, .color-option .swatch {
+      width: 14px; height: 14px; border-radius: 999px;
       background: var(--swatch, #56c1ab);
       box-shadow: 0 0 0 1px rgba(255,255,255,0.25) inset;
       flex-shrink: 0;
+      transition: transform var(--t-fast) var(--ease);
     }
+    .color-dot-btn:hover .swatch { transform: scale(1.25); }
+    .color-dot-btn:focus-visible { outline: none; }
+    .color-dot-btn:focus-visible .swatch { box-shadow: 0 0 0 3px var(--accent-ring); }
     .color-menu {
       /* Floating dropdown. Its position is set in JS using position:fixed
          (relative to the screen) so it overlays *beyond* the card instead
          of being clipped by the card's overflow:hidden — which is needed
          for the rounded corners and the open/close animation. */
-      position: fixed; min-width: 200px;
+      position: fixed;
       max-height: 60vh; overflow-y: auto;
       background: var(--surface-3);
       border: 1px solid var(--border-strong);
-      border-radius: 12px; padding: 6px;
+      border-radius: 12px; padding: 8px;
       box-shadow: var(--shadow);
       display: none; z-index: 1000;
       animation: pop-in var(--t-fast) var(--ease);
     }
-    .color-picker.open .color-menu { display: grid; grid-template-columns: 1fr; gap: 4px; }
+    .color-picker.open .color-menu { display: grid; grid-template-columns: repeat(5, 44px); gap: 4px; }
     .color-option {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 10px; min-height: 40px;
-      border-radius: 8px; border: 1px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      border-radius: 10px; border: 1px solid transparent;
       cursor: pointer;
     }
+    .color-option .swatch { width: 18px; height: 18px; }
     .color-option:hover { background: rgba(255,255,255,0.07); }
     .color-option[aria-selected="true"] { border-color: var(--border-strong); background: rgba(255,255,255,0.05); }
-    .color-option .label { font-size: 14px; }
 
     /* ===== Log panel ===== */
     .log {
@@ -1581,6 +1596,71 @@
         };
         actionsDiv.appendChild(removeBtn);
 
+        // Colour dot: small button in front of the title; tapping it opens
+        // a floating grid of the palette colours.
+        const colorWrap = document.createElement('span');
+        colorWrap.className = 'color-picker';
+
+        const colorBtn = document.createElement('button');
+        colorBtn.type = 'button';
+        colorBtn.className = 'color-dot-btn';
+        colorBtn.style.setProperty('--swatch', drug.color);
+        const colorName = paletteNames[palette.indexOf(drug.color)] || 'Custom';
+        colorBtn.setAttribute('aria-label', `Color: ${colorName}`);
+        colorBtn.setAttribute('aria-haspopup', 'listbox');
+        colorBtn.setAttribute('aria-expanded', 'false');
+        colorBtn.innerHTML = '<span class="swatch"></span>';
+
+        const menu = document.createElement('div');
+        menu.className = 'color-menu';
+        menu.setAttribute('role', 'listbox');
+        menu.setAttribute('aria-label', 'Card color');
+
+        palette.forEach((hex, i) => {
+          const opt = document.createElement('div');
+          opt.className = 'color-option';
+          opt.setAttribute('role', 'option');
+          opt.setAttribute('aria-label', paletteNames[i]);
+          opt.title = paletteNames[i];
+          opt.innerHTML = `<span class="swatch" style="--swatch:${hex}"></span>`;
+          if (hex === drug.color) opt.setAttribute('aria-selected', 'true');
+          opt.addEventListener('click', (ev) => {
+            ev.stopPropagation(); ev.preventDefault();
+            drug.color = hex;
+            saveState();
+            render(); // rebuilds cards + log with the new colour (this also closes the menu)
+          });
+          menu.appendChild(opt);
+        });
+
+        // Place the floating menu just below the dot, flipping above or
+        // nudging sideways if it would run off the edge of the screen.
+        const positionMenu = () => {
+          const r = colorBtn.getBoundingClientRect();
+          const gap = 6, pad = 8;
+          const mw = menu.offsetWidth, mh = menu.offsetHeight;
+          let top = r.bottom + gap;
+          if (top + mh > window.innerHeight - pad && r.top - gap - mh > pad) {
+            top = r.top - gap - mh;
+          }
+          let left = Math.min(r.left, window.innerWidth - pad - mw);
+          left = Math.max(pad, left);
+          menu.style.top = top + 'px';
+          menu.style.left = left + 'px';
+        };
+        colorWrap._reposition = positionMenu; // global scroll/resize handlers use this
+
+        colorBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = colorWrap.classList.toggle('open');
+          colorBtn.setAttribute('aria-expanded', String(isOpen));
+          if (isOpen) positionMenu();
+        });
+
+        colorWrap.appendChild(colorBtn);
+        colorWrap.appendChild(menu);
+
+        topRow.appendChild(colorWrap);
         topRow.appendChild(nameInput);
         topRow.appendChild(actionsDiv);
 
@@ -1718,76 +1798,7 @@
           saveState();
         });
 
-        // Color Picker
-        const colorWrap = document.createElement('div');
-        colorWrap.className = 'color-picker';
-        const colorLabel = document.createElement('label');
-        colorLabel.textContent = 'Color:';
-
-        const colorBtn = document.createElement('button');
-        colorBtn.type = 'button';
-        colorBtn.className = 'color-select-btn';
-        colorBtn.style.setProperty('--swatch', drug.color);
-        const colorName = paletteNames[palette.indexOf(drug.color)] || 'Color';
-        colorBtn.innerHTML = `<span class="swatch"></span><span class="label">${colorName}</span>`;
-        colorBtn.setAttribute('aria-haspopup', 'listbox');
-        colorBtn.setAttribute('aria-expanded', 'false');
-
-        const menu = document.createElement('div');
-        menu.className = 'color-menu';
-        menu.setAttribute('role', 'listbox');
-
-        palette.forEach((hex, i) => {
-          const opt = document.createElement('div');
-          opt.className = 'color-option';
-          opt.setAttribute('role', 'option');
-          opt.innerHTML = `<span class="swatch" style="--swatch:${hex}"></span><span class="label">${paletteNames[i]}</span>`;
-          if (hex === drug.color) opt.setAttribute('aria-selected', 'true');
-
-          const onPick = (ev) => {
-            ev?.stopPropagation(); ev?.preventDefault();
-            drug.color = hex;
-            colorBtn.style.setProperty('--swatch', hex);
-            colorBtn.querySelector('.label').textContent = paletteNames[i];
-            saveState();
-            render(); // Full render to update colors in log
-            colorWrap.classList.remove('open');
-            colorBtn.setAttribute('aria-expanded', 'false');
-          };
-          opt.addEventListener('click', onPick);
-          menu.appendChild(opt);
-        });
-
-        // Place the floating menu just below the button, flipping above or
-        // nudging sideways if it would run off the edge of the screen.
-        const positionMenu = () => {
-          const r = colorBtn.getBoundingClientRect();
-          const gap = 6, pad = 8;
-          const mw = menu.offsetWidth, mh = menu.offsetHeight;
-          let top = r.bottom + gap;
-          if (top + mh > window.innerHeight - pad && r.top - gap - mh > pad) {
-            top = r.top - gap - mh;
-          }
-          let left = Math.min(r.left, window.innerWidth - pad - mw);
-          left = Math.max(pad, left);
-          menu.style.top = top + 'px';
-          menu.style.left = left + 'px';
-        };
-        colorWrap._reposition = positionMenu; // global scroll/resize handlers use this
-
-        colorBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isOpen = colorWrap.classList.toggle('open');
-          colorBtn.setAttribute('aria-expanded', String(isOpen));
-          if (isOpen) positionMenu();
-        });
-
-        colorWrap.appendChild(colorLabel);
-        colorWrap.appendChild(colorBtn);
-        colorWrap.appendChild(menu);
-
         bodyDiv.appendChild(doseRow);
-        bodyDiv.appendChild(colorWrap);
 
         collapseWrap.appendChild(bodyDiv);
         card.appendChild(collapseWrap);
