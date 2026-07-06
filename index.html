@@ -688,7 +688,7 @@
 
     /* ===== Welcome screen (first visit) =====
        Sized to fit a phone screen WITHOUT scrolling: compact spacing, short
-       copy, and the install steps folded behind a tap. */
+       copy. The install steps are the hero — always unfolded, big text. */
     #welcome { z-index: 1150; }
     .welcome { width: min(92vw, 460px); text-align: center; padding: 20px 20px 16px; }
     .welcome-emblem {
@@ -703,38 +703,27 @@
     .welcome-emblem svg { width: 42px; height: 42px; }
     .welcome h2 { margin: 0 0 4px; font-size: 21px; font-weight: 750; letter-spacing: -0.02em; }
     .welcome-tagline { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.45; }
-    .welcome-points { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; text-align: left; }
-    .welcome-points li {
-      display: flex; gap: 12px; align-items: flex-start;
-      background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 10px 13px;
-    }
-    .welcome-points svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-strong); }
-    .welcome-points b { display: block; font-size: 14px; margin-bottom: 1px; }
-    .welcome-points span { color: var(--muted); font-size: 13px; line-height: 1.45; }
     .welcome-install {
       text-align: left; margin-bottom: 12px;
       background: var(--accent-soft); border: 1px solid var(--accent-border);
-      border-radius: var(--radius-sm); padding: 4px 8px;
+      border-radius: var(--radius-sm); padding: 10px 12px 12px;
     }
     .welcome-install[hidden] { display: none; }
-    /* The heading is a button that folds the steps open/closed */
-    .welcome-install-toggle {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      width: 100%; min-height: 40px; padding: 6px 7px;
-      background: transparent; border: none; cursor: pointer;
-      font-family: inherit; font-size: 12.5px; font-weight: 700;
+    .welcome-install-title {
+      margin: 0 0 8px; font-size: 12.5px; font-weight: 700;
       color: var(--accent-strong); text-transform: uppercase; letter-spacing: 0.05em;
-      text-align: left; border-radius: 8px;
-      -webkit-tap-highlight-color: transparent;
     }
-    .welcome-install-toggle svg { flex-shrink: 0; transition: transform var(--t-med) var(--ease); }
-    .welcome-install-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-    .welcome-steps { margin: 2px 0 10px; padding-left: 26px; font-size: 13.5px; line-height: 1.6; display: grid; gap: 4px; }
+    .welcome-install-note { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; }
+    .welcome-install-note[hidden] { display: none; }
+    .welcome-steps { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.55; display: grid; gap: 7px; }
     .welcome-steps[hidden] { display: none; }
     .welcome-steps b { color: var(--accent-strong); }
+    /* Plain (unnumbered) variant used for the "help a friend" lines */
+    .welcome-steps.plain { list-style: none; padding-left: 2px; }
+    /* Small inline Share icon so people can match the picture, not read */
+    .share-glyph { display: inline-block; vertical-align: -3px; margin: 0 1px; color: var(--accent-strong); }
     #welcome-install-btn {
-      width: calc(100% - 14px); margin: 2px 7px 10px;
+      width: 100%; margin: 2px 0 0; min-height: 48px; font-size: 15px;
       background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
       border-color: transparent; color: var(--on-accent); font-weight: 700;
     }
@@ -746,6 +735,26 @@
       box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 28%, transparent);
     }
     .welcome-start:hover { background: var(--accent-strong); }
+    /* Quieter "Maybe later" look when installing is the main action */
+    .welcome-start.welcome-later {
+      background: var(--surface-2); color: var(--muted); font-weight: 600;
+      border: 1px solid var(--border); box-shadow: none;
+    }
+    .welcome-start.welcome-later:hover { background: var(--surface-3); color: var(--text); }
+    /* Bouncing arrow toward Safari's Share button (bottom toolbar) */
+    .welcome-share-arrow {
+      position: fixed; left: 50%; bottom: calc(4px + var(--safe-bottom));
+      transform: translateX(-50%);
+      color: var(--accent-strong); pointer-events: none;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+      animation: share-arrow-bounce 1.3s ease-in-out infinite;
+    }
+    .welcome-share-arrow[hidden] { display: none; }
+    @keyframes share-arrow-bounce {
+      0%, 100% { transform: translate(-50%, -6px); }
+      50% { transform: translate(-50%, 2px); }
+    }
+    @media (prefers-reduced-motion: reduce) { .welcome-share-arrow { animation: none; } }
 
     /* ===== In-app number pad ===== */
     /* Replaces the phone's keypad (which draws letters under the digits —
@@ -807,6 +816,12 @@
     .install-hint[hidden] { display: none; }
     .install-hint .share-icon { flex-shrink: 0; margin-top: 1px; color: var(--accent-strong); }
     .install-hint b { color: var(--accent-strong); }
+    .install-hint .hint-install {
+      flex-shrink: 0; align-self: center; min-height: 36px; padding: 6px 14px;
+      background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
+      border-color: transparent; color: var(--on-accent); font-weight: 700;
+    }
+    .install-hint .hint-install[hidden] { display: none; }
     .install-hint .hint-close {
       flex-shrink: 0; border: none; background: transparent; color: var(--muted);
       font-size: 18px; line-height: 1; cursor: pointer; padding: 2px 6px;
@@ -911,13 +926,16 @@
     </footer>
   </div>
 
-  <!-- iOS install hint (only shown in Safari on iPhone/iPad when not installed) -->
+  <!-- Install hint banner: shown whenever the app runs in a browser tab
+       (never inside the installed app). Message adapts to the platform;
+       dismissing hides it for this visit only. -->
   <div id="install-hint" class="install-hint" hidden role="note">
     <svg class="share-icon" width="18" height="22" viewBox="0 0 18 22" fill="none" aria-hidden="true">
       <path d="M9 1v13M5 5l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M3 9H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
     </svg>
-    <span>Install this app: tap <b>Share</b> in Safari, then <b>"Add&nbsp;to&nbsp;Home&nbsp;Screen"</b>. It will work fully offline.</span>
+    <span id="install-hint-msg">Install this app: tap <b>Share</b> in Safari, then <b>"Add&nbsp;to&nbsp;Home&nbsp;Screen"</b>. It will work fully offline.</span>
+    <button class="btn hint-install" id="install-hint-btn" hidden>Install</button>
     <button class="hint-close" id="install-hint-close" aria-label="Dismiss install hint">&times;</button>
   </div>
 
@@ -983,29 +1001,18 @@
       </div>
       <h2 id="welcome-title">Welcome to DoseTracker</h2>
       <p class="welcome-tagline">A simple, private way to keep track of what you take and when.</p>
-      <ul class="welcome-points">
-        <li>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="9.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
-          <div><b>Private by design</b><span>Everything stays on your phone — nothing is ever uploaded.</span></div>
-        </li>
-        <li>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11L9.5 22 18 10.5h-6.5L13 2z"/></svg>
-          <div><b>Works offline</b><span>Opens instantly, with or without internet.</span></div>
-        </li>
-        <li>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7.2-4.7-9.5-9.2A5.6 5.6 0 0 1 12 6.3a5.6 5.6 0 0 1 9.5 5.5C19.2 16.3 12 21 12 21z"/></svg>
-          <div><b>Free, for everyone</b><span>No ads, no sign-up, no tracking.</span></div>
-        </li>
-      </ul>
       <div class="welcome-install" id="welcome-install">
-        <button type="button" class="welcome-install-toggle" id="welcome-install-toggle" aria-expanded="false" aria-controls="welcome-steps">
-          Get it on your home screen
-          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5 8 10.5 13 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
+        <h3 class="welcome-install-title" id="welcome-install-title">Get it on your home screen</h3>
+        <p class="welcome-install-note" id="welcome-install-note" hidden>A friend can install it too:</p>
         <button class="btn" id="welcome-install-btn" hidden>Install the app</button>
-        <ol class="welcome-steps" id="welcome-steps" hidden></ol>
+        <ol class="welcome-steps" id="welcome-steps"></ol>
       </div>
       <button class="btn welcome-start" id="welcome-start">Get started</button>
+    </div>
+    <!-- Bouncing arrow pointing at Safari's Share button in the bottom toolbar
+         (shown only in Safari on iPhone while the welcome is open) -->
+    <div class="welcome-share-arrow" id="welcome-share-arrow" hidden aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v16M5 13l7 7 7-7"/></svg>
     </div>
   </div>
 
@@ -2511,38 +2518,72 @@
       }
     }, { once: true });
 
-    // iOS install hint: iPhones/iPads have no automatic "install app" prompt,
-    // so we show a small one-time tip in Safari explaining how to do it.
+    // Which phone/browser is this? (shared by the banner and the welcome screen)
+    // iPadOS pretends to be a Mac, hence the maxTouchPoints check.
+    const platformUA = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/i.test(platformUA) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    // Real Safari (not Chrome/Firefox/Edge on iOS, which have their own Share menus)
+    const isIOSSafari = isIOS && /Safari/i.test(platformUA) && !/CriOS|FxiOS|EdgiOS|Chrome/i.test(platformUA);
+    const isAndroid = /Android/i.test(platformUA);
+    // Already running as an installed home-screen app?
+    const isStandalone = navigator.standalone === true ||
+                         window.matchMedia('(display-mode: standalone)').matches;
+
+    // Small inline Share icon (square with up-arrow) so people can match
+    // the picture instead of reading
+    const SHARE_GLYPH = '<svg class="share-glyph" width="15" height="18" viewBox="0 0 18 22" fill="none" aria-hidden="true">' +
+      '<path d="M9 1v13M5 5l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M3 9H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+    // Chrome on Android announces when the app can be installed directly;
+    // we hold on to that so the welcome screen and the banner can offer a
+    // real one-tap Install button instead of written steps.
+    let deferredInstallPrompt = null;
+
+    // Trigger the browser's own install dialog (Android). Returns true if
+    // the person accepted.
+    async function triggerInstallPrompt() {
+      if (!deferredInstallPrompt) return false;
+      const prompt = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      prompt.prompt();
+      try {
+        const choice = await prompt.userChoice;
+        return !!(choice && choice.outcome === 'accepted');
+      } catch { return false; }
+    }
+
+    // Install hint banner: shown whenever the app runs in a browser tab —
+    // never inside the installed app. Dismissing hides it for this visit only,
+    // so it's back the next time they open the site (until they install).
     (function setupInstallHint() {
-      const HINT_DISMISSED_KEY = 'med_tracker_install_hint_dismissed';
       const hint = $('#install-hint');
+      const msg = $('#install-hint-msg');
+      const installBtn = $('#install-hint-btn');
       const closeBtn = $('#install-hint-close');
 
-      const ua = navigator.userAgent;
-      // iPadOS pretends to be a Mac, hence the maxTouchPoints check
-      const isIOS = /iPhone|iPad|iPod/i.test(ua) ||
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      // Real Safari (not Chrome/Firefox/Edge on iOS, which can't install PWAs)
-      const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome/i.test(ua);
-      // Already running as an installed app?
-      const isStandalone = navigator.standalone === true ||
-                           window.matchMedia('(display-mode: standalone)').matches;
+      if (isStandalone) return; // inside the installed app: never show it
 
-      let dismissed = false;
-      try { dismissed = localStorage.getItem(HINT_DISMISSED_KEY) === '1'; } catch {}
-
-      // Skip on the very first visit: the welcome screen already explains
-      // how to install, so the banner would just repeat it.
-      let welcomeSeenBefore = false;
-      try { welcomeSeenBefore = localStorage.getItem('med_tracker_welcome_seen') === '1'; } catch {}
-
-      if (!isIOS || !isSafari || isStandalone || dismissed || !welcomeSeenBefore) return;
-
+      if (isIOSSafari) {
+        msg.innerHTML = 'Install this app: tap <b>Share</b> in Safari, then <b>"Add&nbsp;to&nbsp;Home&nbsp;Screen"</b>. It will work fully offline.';
+      } else if (isIOS) {
+        msg.innerHTML = 'Install this app: tap your browser’s <b>Share</b> button, then <b>"Add&nbsp;to&nbsp;Home&nbsp;Screen"</b>.';
+      } else if (isAndroid) {
+        msg.innerHTML = 'Install this app: tap the <b>⋮ menu</b>, then <b>Install app</b>. It will work fully offline.';
+      } else {
+        msg.innerHTML = 'On your phone, visit <b>dosetracker.github.io</b> — or install it here from the address bar in Chrome or Edge.';
+      }
       hint.hidden = false;
-      closeBtn.addEventListener('click', () => {
-        hint.hidden = true;
-        try { localStorage.setItem(HINT_DISMISSED_KEY, '1'); } catch {}
+
+      // Android, once the real install prompt is available: one-tap button
+      installBtn.addEventListener('click', async () => {
+        const accepted = await triggerInstallPrompt();
+        installBtn.hidden = true;
+        if (accepted) hint.hidden = true;
       });
+
+      closeBtn.addEventListener('click', () => { hint.hidden = true; });
     })();
 
     // =====================================================================
@@ -2550,18 +2591,21 @@
     // how to install it. Reopen any time from the Information dialog.
     // =====================================================================
 
-    // Chrome on Android announces when the app can be installed directly;
-    // we hold on to that so the welcome screen can offer a real Install button
-    // instead of written steps.
-    let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredInstallPrompt = e;
-      // If the install guide is already unfolded, swap the written steps
-      // for the real one-tap Install button
+      // Swap the welcome's written steps for the real one-tap Install button
       const btn = $('#welcome-install-btn');
       const steps = $('#welcome-steps');
-      if (btn && !steps.hidden) { btn.hidden = false; steps.hidden = true; }
+      if (btn && !isStandalone) { btn.hidden = false; steps.hidden = true; }
+      // ...and offer the same one-tap install in the banner
+      const hint = $('#install-hint');
+      const hintBtn = $('#install-hint-btn');
+      const hintMsg = $('#install-hint-msg');
+      if (hintBtn && !hint.hidden) {
+        hintMsg.innerHTML = 'Install this app — free, works fully offline.';
+        hintBtn.hidden = false;
+      }
     });
 
     (function setupWelcome() {
@@ -2569,33 +2613,32 @@
       const overlay = $('#welcome');
       const startBtn = $('#welcome-start');
       const installSection = $('#welcome-install');
+      const installTitle = $('#welcome-install-title');
+      const installNote = $('#welcome-install-note');
       const stepsList = $('#welcome-steps');
       const installBtn = $('#welcome-install-btn');
       const againBtn = $('#welcome-again');
-
-      const ua = navigator.userAgent;
-      const isIOS = /iPhone|iPad|iPod/i.test(ua) ||
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      const isIOSSafari = isIOS && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|Chrome/i.test(ua);
-      const isAndroid = /Android/i.test(ua);
-      const isStandalone = navigator.standalone === true ||
-                           window.matchMedia('(display-mode: standalone)').matches;
+      const shareArrow = $('#welcome-share-arrow');
 
       // Show only the install instructions that fit this phone/browser.
-      // The steps stay folded behind the "Get it on your home screen" header
-      // so the whole welcome fits on one phone screen.
-      const installToggle = $('#welcome-install-toggle');
+      // They are always unfolded — installing is the main thing we ask for.
       if (isStandalone) {
-        installSection.hidden = true; // already running as an installed app
+        // Already installed: confirm it, and show how a friend can get it too
+        installTitle.textContent = '✓ Already on your home screen';
+        installNote.hidden = false;
+        stepsList.classList.add('plain');
+        stepsList.innerHTML =
+          `<li><b>iPhone:</b> open the link, tap <b>Share</b> ${SHARE_GLYPH} → <b>Add to Home Screen</b></li>` +
+          '<li><b>Android:</b> tap the <b>⋮ menu</b> → <b>Install app</b></li>';
       } else {
         let steps;
         if (isIOSSafari) {
-          steps = ['Tap the <b>Share</b> button at the bottom of Safari',
-                   'Scroll down and choose <b>Add to Home Screen</b>',
-                   'Tap <b>Add</b> — the app appears on your home screen'];
+          steps = [`Tap the <b>Share</b> button ${SHARE_GLYPH} at the bottom of Safari`,
+                   'Scroll down, tap <b>Add to Home Screen</b>',
+                   'Tap <b>Add</b> — done!'];
         } else if (isIOS) {
-          steps = ['Open this page in <b>Safari</b> (other browsers can’t install it on iPhone)',
-                   'Tap the <b>Share</b> button, then <b>Add to Home Screen</b>'];
+          steps = [`Tap your browser’s <b>Share</b> button ${SHARE_GLYPH} (in Chrome it’s next to the address bar)`,
+                   'Tap <b>Add to Home Screen</b>, then <b>Add</b>'];
         } else if (isAndroid) {
           steps = ['Tap the <b>⋮ menu</b> in the corner of your browser',
                    'Choose <b>Install app</b> or <b>Add to Home screen</b>'];
@@ -2604,26 +2647,24 @@
                    'On a computer: in Chrome or Edge, click the install icon at the right end of the address bar'];
         }
         stepsList.innerHTML = steps.map((s) => `<li>${s}</li>`).join('');
-
-        installToggle.addEventListener('click', () => {
-          const open = installToggle.getAttribute('aria-expanded') !== 'true';
-          installToggle.setAttribute('aria-expanded', String(open));
-          if (!open) { installBtn.hidden = true; stepsList.hidden = true; return; }
-          // Android with a real install prompt gets the one-tap button;
-          // everyone else gets the written steps
-          if (deferredInstallPrompt) { installBtn.hidden = false; stepsList.hidden = true; }
-          else { stepsList.hidden = false; installBtn.hidden = true; }
-        });
+        // Installing is the main event, so closing the welcome is the quiet option
+        startBtn.textContent = 'Maybe later';
+        startBtn.classList.add('welcome-later');
+        // Android with a real install prompt: one-tap button instead of steps
+        if (deferredInstallPrompt) { installBtn.hidden = false; stepsList.hidden = true; }
       }
 
       function openWelcome() {
         overlay.style.display = 'flex';
         overlay.classList.add('show');
+        // Point at Safari's Share button in the bottom toolbar
+        if (isIOSSafari && !isStandalone) shareArrow.hidden = false;
         startBtn.focus({ preventScroll: true });
       }
       function closeWelcome() {
         overlay.classList.remove('show');
         overlay.style.display = 'none';
+        shareArrow.hidden = true;
         try { localStorage.setItem(WELCOME_KEY, '1'); } catch {}
       }
 
@@ -2635,15 +2676,10 @@
 
       // Android: trigger the browser's own install dialog
       installBtn.addEventListener('click', async () => {
-        if (!deferredInstallPrompt) return;
-        deferredInstallPrompt.prompt();
-        try {
-          const choice = await deferredInstallPrompt.userChoice;
-          if (choice && choice.outcome === 'accepted') installSection.hidden = true;
-        } catch {}
-        deferredInstallPrompt = null;
+        const accepted = await triggerInstallPrompt();
         installBtn.hidden = true;
-        stepsList.hidden = false;
+        if (accepted) { installSection.hidden = true; closeWelcome(); }
+        else stepsList.hidden = false;
       });
 
       // "Show welcome & install guide" inside the Information dialog
