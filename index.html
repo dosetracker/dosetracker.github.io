@@ -781,9 +781,13 @@
       border-color: var(--accent-border);
       background: var(--accent-soft);
     }
-    /* Extra room at the bottom so the field being typed into can scroll
-       up above the pad */
-    body.numpad-open { padding-bottom: 360px; }
+    /* Extra room at the bottom so the field being typed into can scroll up
+       above the pad. The room must go on .container, NOT body: body's height
+       is locked to the screen (html,body{height:100%} + border-box), so
+       padding there never actually added scroll space — on a short page the
+       field stayed buried under the pad. Padding the container genuinely
+       makes the page taller, so the scroll always has somewhere to go. */
+    body.numpad-open .container { padding-bottom: 440px; }
 
     /* ===== iOS install hint banner ===== */
     .install-hint {
@@ -1267,8 +1271,18 @@
       numpadActionBtn.textContent = actionLabel;
       numpad.classList.add('show');
       document.body.classList.add('numpad-open');
-      // Give the page its extra bottom room first, then bring the field into view
-      setTimeout(() => input.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+      // Give the page its extra bottom room first, then scroll just far
+      // enough that the field sits clearly above the pad. Computed by hand
+      // (not scrollIntoView) so the result is exact regardless of what the
+      // browser's own focus handling did.
+      setTimeout(() => {
+        const r = input.getBoundingClientRect();
+        const padTop = window.innerHeight - numpad.offsetHeight;
+        const clearance = 90; // field ends up this far above the pad
+        if (r.bottom > padTop - 16) {
+          window.scrollBy({ top: r.bottom - (padTop - clearance), behavior: 'smooth' });
+        }
+      }, 80);
     }
 
     function closeNumpad() {
