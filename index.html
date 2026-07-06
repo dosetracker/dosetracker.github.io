@@ -272,9 +272,16 @@
        name expands/collapses the card instead of opening the keyboard. */
     input.drug-title {
       font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
-      padding: 4px 6px; margin: 0 0 0 -6px; flex: 1; min-width: 0;
+      padding: 4px 6px; margin: 0 0 0 -6px; flex: 0 1 auto; min-width: 0;
       background: transparent; border: none; color: var(--text);
       font-family: inherit; border-radius: 8px;
+    }
+    /* Invisible copy of the title text; JS measures it to shrink the input
+       to its content, so the pencil sits right next to the name */
+    .title-sizer {
+      position: absolute; left: -9999px; top: 0; visibility: hidden;
+      white-space: pre;
+      font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
     }
     /* While read-only, taps fall through to the header (which expands the card) */
     input.drug-title:not(.editing) { pointer-events: none; }
@@ -294,8 +301,6 @@
     input.drug-title.invalid { color: var(--danger); }
     .name-error { color: var(--danger); font-size: 12px; margin: 0; display: none; }
 
-    .card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-
     .btn-sm { padding: 8px 11px; font-size: 12.5px; min-height: 36px; }
 
     .repeat-btn {
@@ -308,10 +313,11 @@
     .repeat-btn svg { flex-shrink: 0; }
     .repeat-btn:hover { background: rgba(86,193,171,0.22); }
 
-    /* Chevron — the only control that expands/collapses a card */
+    /* Chevron in the top-right corner (margin-left:auto pushes it there,
+       since the title no longer stretches across the row) */
     .chev-btn {
       width: 36px; height: 36px; flex-shrink: 0;
-      margin: -4px -10px -4px -6px;
+      margin: -4px -10px -4px auto;
       display: flex; align-items: center; justify-content: center;
       background: transparent; border: none; padding: 0;
       color: var(--muted); cursor: pointer; border-radius: 999px;
@@ -359,6 +365,10 @@
     }
     .meta-block { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
     .meta-block:last-child { text-align: right; }
+    /* Right half of the meta row: the repeat button sits next to TOTAL.
+       .meta ignores taps (so they expand the card) — the button opts back in. */
+    .meta-right { display: flex; align-items: flex-end; gap: 12px; min-width: 0; }
+    .meta .repeat-btn { pointer-events: auto; }
     .meta-label {
       font-size: 11px; font-weight: 600; color: var(--faint);
       text-transform: uppercase; letter-spacing: 0.07em;
@@ -504,11 +514,12 @@
       box-shadow: var(--shadow-soft);
       overflow: hidden;
     }
+    /* Title on its own line, the two buttons in a row below it */
     .log-header {
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; flex-direction: column; align-items: flex-start;
+      gap: 10px;
       padding: 14px 16px;
       border-bottom: 1px solid var(--border);
-      flex-wrap: wrap; row-gap: 8px;
     }
 
     /* The share button gets the accent treatment — it's the friendly action.
@@ -570,8 +581,11 @@
 
     .edit-input { width: 100%; min-width: 0; }
 
-    /* Layout for the amount + unit fields while editing a log row */
-    .edit-amount-grid { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; }
+    /* Layout for the amount + unit fields while editing a log row.
+       The unit column takes its natural width so "mg" etc. never get
+       clipped; only genuinely long content would make it shrink. */
+    .edit-amount-grid { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 8px; }
+    .edit-amount-grid select { width: auto; }
 
     /* If iOS AutoFill touches a field it paints it with its own (light)
        background, which made light text invisible. Force our colours. */
@@ -769,7 +783,7 @@
     }
     /* Extra room at the bottom so the field being typed into can scroll
        up above the pad */
-    body.numpad-open { padding-bottom: 300px; }
+    body.numpad-open { padding-bottom: 360px; }
 
     /* ===== iOS install hint banner ===== */
     .install-hint {
@@ -1654,15 +1668,26 @@
         renameBtn.innerHTML = ICONS.pencil;
         renameBtn.addEventListener('click', (e) => { e.stopPropagation(); startTitleEdit(); });
 
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'card-actions';
+        // Invisible mirror of the title text: measured to shrink the input
+        // to its content, so the pencil sits right next to the name instead
+        // of at the far end of the row. Re-measured on every keystroke.
+        const sizer = document.createElement('span');
+        sizer.className = 'title-sizer';
+        sizer.setAttribute('aria-hidden', 'true');
+        const sizeTitle = () => {
+          sizer.textContent = nameInput.value || ' ';
+          nameInput.style.width = Math.ceil(sizer.getBoundingClientRect().width + 18) + 'px';
+        };
+        nameInput.addEventListener('input', sizeTitle);
 
         // Repeat button: shows the actual dose it will add ("↻ 120 mg") —
         // shorter than "Repeat Last Dose" and answers "what will this do?"
+        // It lives in the meta row next to TOTAL (appended there below).
         const lastEntry = getLastEntry(drug.id);
+        let repeatBtn = null;
         if (lastEntry) {
           const lastDoseText = displayValueUnit(lastEntry.value, lastEntry.unit);
-          const repeatBtn = document.createElement('button');
+          repeatBtn = document.createElement('button');
           repeatBtn.type = 'button';
           repeatBtn.className = 'btn-sm repeat-btn';
           repeatBtn.innerHTML = ICONS.repeat;
@@ -1673,7 +1698,6 @@
             e.stopPropagation();
             addEntryStandard(drug.id, drug.name, null, null, drug.color, lastEntry.value, lastEntry.unitRaw);
           };
-          actionsDiv.appendChild(repeatBtn);
         }
 
         // One shared toggle used by the chevron AND taps on the header.
@@ -1765,8 +1789,8 @@
         topRow.appendChild(colorWrap);
         topRow.appendChild(nameInput);
         topRow.appendChild(renameBtn);
-        topRow.appendChild(actionsDiv);
         topRow.appendChild(chevBtn);
+        topRow.appendChild(sizer);
 
         // Tap anywhere on the header (not on a button/input/menu) to
         // expand or collapse — much bigger target than the chevron alone
@@ -1805,8 +1829,15 @@
         totalBlock.appendChild(totalLabel);
         totalBlock.appendChild(totalSpan);
 
+        // Right half of the meta row: repeat button (if there is a dose to
+        // repeat) next to the TOTAL block
+        const metaRight = document.createElement('div');
+        metaRight.className = 'meta-right';
+        if (repeatBtn) metaRight.appendChild(repeatBtn);
+        metaRight.appendChild(totalBlock);
+
         meta.appendChild(lastBlock);
-        meta.appendChild(totalBlock);
+        meta.appendChild(metaRight);
 
         const nameErr = document.createElement('div');
         nameErr.className = 'name-error';
@@ -1975,6 +2006,8 @@
           renameBtn.setAttribute('aria-label', `Rename ${drug.name}`);
           saveState();
         });
+        // Re-measure after every edit attempt (the value may have reverted)
+        nameInput.addEventListener('blur', sizeTitle);
 
         // Remove — a small red-tinted pill at the bottom LEFT of the body
         // (same danger style as the confirm dialog), diagonal from the Add
@@ -2007,6 +2040,7 @@
         collapseWrap.appendChild(bodyDiv);
         card.appendChild(collapseWrap);
         grid.appendChild(card);
+        sizeTitle(); // needs the card in the page to measure the text
       });
     }
 
@@ -2251,7 +2285,10 @@
         : `Added ${dosageText} of ${currentDrugName}`);
     }
 
-    function startEdit(entryId) { editingId = entryId; render(); const inp = document.getElementById(`edit-num-${entryId}`); if (inp) inp.focus(); }
+    // No auto-focus here: the number pad should only slide up when the
+    // person actually taps the amount field, not the moment editing starts
+    // (it used to cover the row being edited).
+    function startEdit(entryId) { editingId = entryId; render(); }
 
     function saveEdit(entryId) {
       const amountEl = document.getElementById(`edit-num-${entryId}`);
