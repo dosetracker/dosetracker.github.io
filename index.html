@@ -220,7 +220,9 @@
     }
 
     /* ===== Drug card grid ===== */
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    /* align-items:start keeps collapsed cards at their natural height instead
+       of stretching to match an expanded neighbour */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
 
     .grid-empty {
       grid-column: 1 / -1;
@@ -258,25 +260,37 @@
       flex-direction: column;
       gap: 6px;
       -webkit-tap-highlight-color: transparent;
+      cursor: pointer; /* the whole header toggles expand/collapse */
     }
 
     .card-top-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 
     /* Drug title — the most prominent text on the card.
        (Deliberately NOT called "name" anywhere: iOS sees fields labelled
-       "name" as contact forms and offers to AutoFill your personal details.) */
+       "name" as contact forms and offers to AutoFill your personal details.)
+       Read-only until the pencil button next to it is tapped, so tapping the
+       name expands/collapses the card instead of opening the keyboard. */
     input.drug-title {
       font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
       padding: 4px 6px; margin: 0 0 0 -6px; flex: 1; min-width: 0;
       background: transparent; border: none; color: var(--text);
       font-family: inherit; border-radius: 8px;
-      position: relative; z-index: 1; /* wins taps where it overlaps the colour dot's hit area */
     }
+    /* While read-only, taps fall through to the header (which expands the card) */
+    input.drug-title:not(.editing) { pointer-events: none; }
     input.drug-title:focus {
       outline: none;
       background: var(--surface-3);
       box-shadow: 0 0 0 3px var(--accent-ring);
     }
+    /* Small pencil next to the title — the only way to start renaming.
+       (Doubled class beats the base .icon-btn sizes defined further down.) */
+    .icon-btn.title-edit-btn {
+      width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+      margin: -4px 0 -4px -2px; padding: 0;
+      color: var(--faint);
+    }
+    .icon-btn.title-edit-btn:hover { color: var(--text); }
     input.drug-title.invalid { color: var(--danger); }
     .name-error { color: var(--danger); font-size: 12px; margin: 0; display: none; }
 
@@ -288,7 +302,10 @@
       color: var(--accent-strong);
       border-color: var(--accent-border);
       background: var(--accent-soft);
+      display: inline-flex; align-items: center; gap: 6px;
+      white-space: nowrap;
     }
+    .repeat-btn svg { flex-shrink: 0; }
     .repeat-btn:hover { background: rgba(86,193,171,0.22); }
 
     /* Chevron — the only control that expands/collapses a card */
@@ -305,12 +322,13 @@
     .chev-btn svg { transition: transform var(--t-med) var(--ease); }
     .card:not(.collapsed) .chev-btn svg { transform: rotate(180deg); }
 
-    /* Footer line inside the card body: the quiet "Taken earlier?" link on
-       the left, and Remove on the right as a small danger pill (btn-sm
-       btn-danger) so it clearly reads as destructive. */
+    /* Footer line inside the card body: Remove on the LEFT (kept away from
+       the Add button above it on the right, so a missed tap at Add can't
+       delete the substance) and the quiet "Taken earlier?" link on the right.
+       The extra top margin adds distance below the dose row. */
     .card-foot {
       display: flex; justify-content: space-between; align-items: center;
-      gap: 12px; min-height: 28px;
+      gap: 12px; min-height: 28px; margin-top: 6px;
     }
     .link-btn {
       background: none; border: none; padding: 4px 0; cursor: pointer;
@@ -325,7 +343,8 @@
     input.earlier-time { width: auto; min-height: 36px; padding: 6px 10px; }
     .earlier-cancel {
       background: none; border: none; cursor: pointer; padding: 4px 8px;
-      color: var(--muted); font-size: 15px; line-height: 1; border-radius: 8px;
+      color: var(--muted); line-height: 1; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
       -webkit-tap-highlight-color: transparent;
     }
     .earlier-cancel:hover { color: var(--text); background: rgba(255,255,255,0.06); }
@@ -473,7 +492,8 @@
     }
     .color-option .swatch { width: 18px; height: 18px; }
     .color-option:hover { background: rgba(255,255,255,0.07); }
-    .color-option[aria-selected="true"] { border-color: var(--border-strong); background: rgba(255,255,255,0.05); }
+    /* The current colour gets a clear teal ring, not just a faint border */
+    .color-option[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
 
     /* ===== Log panel ===== */
     .log {
@@ -539,9 +559,10 @@
     .drug-chip {
       display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px;
       border-radius: 999px; font-weight: 600; font-size: 13.5px;
-      max-width: 100%; white-space: normal; border: 1px solid var(--border-strong); flex-wrap: wrap;
+      max-width: 100%; border: 1px solid var(--border-strong);
     }
-    .drug-chip > span:not(.dot) { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+    /* Long names get an ellipsis (…) instead of breaking mid-word */
+    .drug-chip > span:not(.dot) { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .drug-chip .dot {
       width: 9px; height: 9px; border-radius: 999px; flex: 0 0 9px;
       background: var(--dot, #56c1ab); box-shadow: 0 0 0 1px rgba(0,0,0,0.15) inset;
@@ -651,45 +672,55 @@
     .contact-line a { color: var(--accent-strong); text-underline-offset: 3px; }
     #welcome-again { display: block; margin: 12px auto 0; }
 
-    /* ===== Welcome screen (first visit) ===== */
+    /* ===== Welcome screen (first visit) =====
+       Sized to fit a phone screen WITHOUT scrolling: compact spacing, short
+       copy, and the install steps folded behind a tap. */
     #welcome { z-index: 1150; }
-    .welcome { width: min(92vw, 460px); text-align: center; padding: 26px 22px 20px; }
+    .welcome { width: min(92vw, 460px); text-align: center; padding: 20px 20px 16px; }
     .welcome-emblem {
-      width: 64px; height: 64px; margin: 2px auto 14px;
-      border-radius: 16px;
+      width: 56px; height: 56px; margin: 0 auto 10px;
+      border-radius: 14px;
       background: linear-gradient(135deg, #232b36 0%, #11151b 100%);
       border: 1px solid var(--border-strong);
       box-shadow: 0 6px 18px rgba(0,0,0,0.45),
                   0 0 26px color-mix(in srgb, var(--accent) 18%, transparent);
       display: grid; place-items: center;
     }
-    .welcome-emblem svg { width: 46px; height: 46px; }
-    .welcome h2 { margin: 0 0 6px; font-size: 22px; font-weight: 750; letter-spacing: -0.02em; }
-    .welcome-tagline { margin: 0 0 18px; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
-    .welcome-points { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; text-align: left; }
+    .welcome-emblem svg { width: 42px; height: 42px; }
+    .welcome h2 { margin: 0 0 4px; font-size: 21px; font-weight: 750; letter-spacing: -0.02em; }
+    .welcome-tagline { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .welcome-points { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; text-align: left; }
     .welcome-points li {
       display: flex; gap: 12px; align-items: flex-start;
       background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 12px 14px;
+      border-radius: var(--radius-sm); padding: 10px 13px;
     }
     .welcome-points svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-strong); }
-    .welcome-points b { display: block; font-size: 14px; margin-bottom: 2px; }
-    .welcome-points span { color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .welcome-points b { display: block; font-size: 14px; margin-bottom: 1px; }
+    .welcome-points span { color: var(--muted); font-size: 13px; line-height: 1.45; }
     .welcome-install {
-      text-align: left; margin-bottom: 16px;
+      text-align: left; margin-bottom: 12px;
       background: var(--accent-soft); border: 1px solid var(--accent-border);
-      border-radius: var(--radius-sm); padding: 13px 15px;
+      border-radius: var(--radius-sm); padding: 4px 8px;
     }
     .welcome-install[hidden] { display: none; }
-    .welcome-install h3 {
-      margin: 0 0 8px; font-size: 12.5px; font-weight: 700;
+    /* The heading is a button that folds the steps open/closed */
+    .welcome-install-toggle {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; min-height: 40px; padding: 6px 7px;
+      background: transparent; border: none; cursor: pointer;
+      font-family: inherit; font-size: 12.5px; font-weight: 700;
       color: var(--accent-strong); text-transform: uppercase; letter-spacing: 0.05em;
+      text-align: left; border-radius: 8px;
+      -webkit-tap-highlight-color: transparent;
     }
-    .welcome-steps { margin: 0; padding-left: 20px; font-size: 13.5px; line-height: 1.6; display: grid; gap: 4px; }
+    .welcome-install-toggle svg { flex-shrink: 0; transition: transform var(--t-med) var(--ease); }
+    .welcome-install-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+    .welcome-steps { margin: 2px 0 10px; padding-left: 26px; font-size: 13.5px; line-height: 1.6; display: grid; gap: 4px; }
     .welcome-steps[hidden] { display: none; }
     .welcome-steps b { color: var(--accent-strong); }
     #welcome-install-btn {
-      width: 100%; margin-bottom: 10px;
+      width: calc(100% - 14px); margin: 2px 7px 10px;
       background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
       border-color: transparent; color: var(--on-accent); font-weight: 700;
     }
@@ -780,7 +811,7 @@
       tbody td { padding: 10px 8px; }
       thead th:nth-child(4), tbody td:nth-child(4) { text-align: right; }
       tbody td:nth-child(2) { white-space: normal; overflow-wrap: anywhere; }
-      tbody td:nth-child(1) .drug-chip { display: inline-flex; max-width: 100%; white-space: normal; }
+      tbody td:nth-child(1) .drug-chip { display: inline-flex; max-width: 100%; }
 
       /* On narrow screens, stack the amount field above the unit picker so
          each gets the full width and typed numbers are always visible */
@@ -834,7 +865,7 @@
       <div class="log-header">
         <h3>Tonight's log</h3>
         <div class="controls">
-          <button id="share-log" title="Send your current log as an image">Share with a Friend</button>
+          <button id="share-log" title="Send your current log as an image">Share with a friend</button>
           <button id="clear-log" title="Clear the log">Clear log</button>
         </div>
       </div>
@@ -858,7 +889,7 @@
     <footer class="page-footer">
       <button id="privacy-open" class="footer-link" aria-haspopup="dialog" aria-controls="privacy">Information</button>
       <span class="footer-sep" aria-hidden="true">·</span>
-      <button id="reset-all" class="footer-link footer-link-danger" title="Clear drugs and entries">Reset Everything</button>
+      <button id="reset-all" class="footer-link footer-link-danger" title="Clear drugs and entries">Reset everything</button>
     </footer>
   </div>
 
@@ -937,21 +968,24 @@
       <ul class="welcome-points">
         <li>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="9.5" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
-          <div><b>Private by design</b><span>Everything stays on your phone. No account, no server — nothing is ever uploaded.</span></div>
+          <div><b>Private by design</b><span>Everything stays on your phone — nothing is ever uploaded.</span></div>
         </li>
         <li>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4.5 13.5H11L9.5 22 18 10.5h-6.5L13 2z"/></svg>
-          <div><b>Works offline</b><span>After the first visit it opens instantly, with or without internet.</span></div>
+          <div><b>Works offline</b><span>Opens instantly, with or without internet.</span></div>
         </li>
         <li>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7.2-4.7-9.5-9.2A5.6 5.6 0 0 1 12 6.3a5.6 5.6 0 0 1 9.5 5.5C19.2 16.3 12 21 12 21z"/></svg>
-          <div><b>Free, for everyone</b><span>No ads, no sign-up, no tracking. Just the app.</span></div>
+          <div><b>Free, for everyone</b><span>No ads, no sign-up, no tracking.</span></div>
         </li>
       </ul>
       <div class="welcome-install" id="welcome-install">
-        <h3>Get it on your home screen</h3>
+        <button type="button" class="welcome-install-toggle" id="welcome-install-toggle" aria-expanded="false" aria-controls="welcome-steps">
+          Get it on your home screen
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5 8 10.5 13 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <button class="btn" id="welcome-install-btn" hidden>Install the app</button>
-        <ol class="welcome-steps" id="welcome-steps"></ol>
+        <ol class="welcome-steps" id="welcome-steps" hidden></ol>
       </div>
       <button class="btn welcome-start" id="welcome-start">Get started</button>
     </div>
@@ -967,7 +1001,7 @@
         </div>
       </div>
       <div class="privacy-content">
-        <p><em>Everything you track stays on your phone.</em> There is no server and no account — nothing is ever uploaded, and the app works fully offline. Anyone opening the app’s link just gets their own empty copy. To erase your data, use “Reset Everything”.</p>
+        <p><em>Everything you track stays on your phone.</em> There is no server and no account — nothing is ever uploaded, and the app works fully offline. Anyone opening the app’s link just gets their own empty copy. To erase your data, use “Reset everything”.</p>
         <p>If a friend wants DoseTracker too, they can scan this code or type in the address:</p>
         <div class="qr-card">
           <!-- QR code for the app URL (generated once, works offline) -->
@@ -1082,6 +1116,15 @@
 
     const palette = ['#ef4444','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
     const paletteNames = ['Red','Orange','Yellow','Lime','Green','Teal','Cyan','Blue','Violet','Pink'];
+
+    // Small inline icons (SVG, drawn locally — no network). Typed glyphs like
+    // ✎ and ✕ render with different weights on every platform; these don't.
+    const ICONS = {
+      pencil: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+      check:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+      x:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+      repeat: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
+    };
 
     // --- State ---
     // IMPORTANT: the storage key stays the same so existing data keeps working.
@@ -1550,8 +1593,9 @@
         const card = document.createElement('div');
         card.className = `card ${drug.expanded ? '' : 'collapsed'}`;
         card.dataset.id = drug.id;
-        // Expanding/collapsing happens ONLY via the chevron button in the
-        // top-right corner — taps elsewhere on the card never toggle it.
+        // Expanding/collapsing: tap anywhere on the card header (name, big
+        // numbers, empty space) or the chevron. Buttons and the colour dot
+        // keep their own jobs and never toggle the card.
 
         const strip = document.createElement('div');
         strip.className = 'color-strip';
@@ -1579,6 +1623,10 @@
         nameInput.className = 'drug-title';
         nameInput.value = drug.name;
         nameInput.dataset.prev = drug.name;
+        // Read-only until the pencil is tapped: tapping the title then
+        // expands the card instead of opening the keyboard by surprise
+        nameInput.readOnly = true;
+        nameInput.tabIndex = -1; // keyboard users rename via the pencil button
         // "next" because the flow continues into the amount field
         nameInput.setAttribute('enterkeyhint', 'next');
         nameInput.setAttribute('aria-label', 'Substance');
@@ -1589,16 +1637,38 @@
         nameInput.setAttribute('autocapitalize', 'off');
         nameInput.setAttribute('spellcheck', 'false');
 
+        // The pencil that unlocks the title for renaming. Must focus the
+        // input synchronously (inside the real tap) or iOS keeps the
+        // keyboard closed — same rule as in the "+ Add substance" handler.
+        const startTitleEdit = () => {
+          nameInput.readOnly = false;
+          nameInput.classList.add('editing');
+          nameInput.focus();
+          nameInput.select();
+        };
+        const renameBtn = document.createElement('button');
+        renameBtn.type = 'button';
+        renameBtn.className = 'icon-btn title-edit-btn';
+        renameBtn.title = 'Rename';
+        renameBtn.setAttribute('aria-label', `Rename ${drug.name}`);
+        renameBtn.innerHTML = ICONS.pencil;
+        renameBtn.addEventListener('click', (e) => { e.stopPropagation(); startTitleEdit(); });
+
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'card-actions';
 
-        // Repeat Last Button
+        // Repeat button: shows the actual dose it will add ("↻ 120 mg") —
+        // shorter than "Repeat Last Dose" and answers "what will this do?"
         const lastEntry = getLastEntry(drug.id);
         if (lastEntry) {
+          const lastDoseText = displayValueUnit(lastEntry.value, lastEntry.unit);
           const repeatBtn = document.createElement('button');
+          repeatBtn.type = 'button';
           repeatBtn.className = 'btn-sm repeat-btn';
-          repeatBtn.textContent = 'Repeat Last Dose';
-          repeatBtn.title = `Add ${displayValueUnit(lastEntry.value, lastEntry.unit)} (same as last)`;
+          repeatBtn.innerHTML = ICONS.repeat;
+          repeatBtn.appendChild(document.createTextNode(lastDoseText));
+          repeatBtn.title = `Repeat last dose (${lastDoseText})`;
+          repeatBtn.setAttribute('aria-label', `Repeat last dose: ${lastDoseText}`);
           repeatBtn.onclick = (e) => {
             e.stopPropagation();
             addEntryStandard(drug.id, drug.name, null, null, drug.color, lastEntry.value, lastEntry.unitRaw);
@@ -1606,8 +1676,18 @@
           actionsDiv.appendChild(repeatBtn);
         }
 
-        // Chevron — the only control that expands/collapses the card
+        // One shared toggle used by the chevron AND taps on the header.
+        // Toggles the class directly (instead of re-rendering everything) so
+        // the open/close animation can play. Sort order doesn't change here.
         const chevBtn = document.createElement('button');
+        const toggleCard = () => {
+          drug.expanded = !drug.expanded;
+          saveState();
+          card.classList.toggle('collapsed', !drug.expanded);
+          chevBtn.setAttribute('aria-expanded', String(!!drug.expanded));
+          chevBtn.setAttribute('aria-label', drug.expanded ? 'Hide details' : 'Show details');
+        };
+
         chevBtn.type = 'button';
         chevBtn.className = 'chev-btn';
         chevBtn.setAttribute('aria-expanded', String(!!drug.expanded));
@@ -1615,13 +1695,7 @@
         chevBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5 8 10.5 13 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         chevBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          drug.expanded = !drug.expanded;
-          saveState();
-          // Toggle the class directly (instead of re-rendering everything) so
-          // the open/close animation can play. Sort order doesn't change here.
-          card.classList.toggle('collapsed', !drug.expanded);
-          chevBtn.setAttribute('aria-expanded', String(!!drug.expanded));
-          chevBtn.setAttribute('aria-label', drug.expanded ? 'Hide details' : 'Show details');
+          toggleCard();
         });
 
         // Colour dot: small button in front of the title; tapping it opens
@@ -1690,8 +1764,16 @@
 
         topRow.appendChild(colorWrap);
         topRow.appendChild(nameInput);
+        topRow.appendChild(renameBtn);
         topRow.appendChild(actionsDiv);
         topRow.appendChild(chevBtn);
+
+        // Tap anywhere on the header (not on a button/input/menu) to
+        // expand or collapse — much bigger target than the chevron alone
+        headerDiv.addEventListener('click', (e) => {
+          if (e.target.closest('button, input, select, .color-picker')) return;
+          toggleCard();
+        });
 
         const meta = document.createElement('div');
         meta.className = 'meta';
@@ -1788,7 +1870,7 @@
         const earlierCancel = document.createElement('button');
         earlierCancel.type = 'button';
         earlierCancel.className = 'earlier-cancel';
-        earlierCancel.textContent = '✕';
+        earlierCancel.innerHTML = ICONS.x;
         earlierCancel.setAttribute('aria-label', 'Cancel earlier time');
         earlierEdit.appendChild(earlierLabel);
         earlierEdit.appendChild(timeInput);
@@ -1835,7 +1917,7 @@
         doseRow.appendChild(addBtn);
 
         // Name Editing Logic
-        nameInput.addEventListener('click', (e) => { e.stopPropagation(); }); // Prevent collapse
+        nameInput.addEventListener('click', (e) => { e.stopPropagation(); }); // Prevent collapse while editing
         nameInput.addEventListener('focus', () => {
             nameInput.dataset.prev = drug.name;
             nameInput.select(); // Auto-select all text for easy overwrite
@@ -1843,9 +1925,11 @@
         nameInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              // Jump straight to the amount field; this blurs the name
-              // (saving it) and our own number pad opens right away
-              numInput.focus();
+              // On an expanded card, jump straight to the amount field (this
+              // blurs the name, saving it, and our own number pad opens).
+              // On a collapsed card the amount field is hidden — just save.
+              if (drug.expanded) numInput.focus();
+              else nameInput.blur();
             }
         });
         nameInput.addEventListener('input', () => {
@@ -1873,6 +1957,9 @@
           }
         });
         nameInput.addEventListener('blur', () => {
+          // Lock the title again — the pencil is the only way back in
+          nameInput.readOnly = true;
+          nameInput.classList.remove('editing');
           const proposed = nameInput.value.trim();
           const prev = nameInput.dataset.prev || drug.name;
           const isEmpty = proposed.length === 0;
@@ -1885,12 +1972,14 @@
             return;
           }
           drug.name = proposed;
+          renameBtn.setAttribute('aria-label', `Rename ${drug.name}`);
           saveState();
         });
 
-        // Remove — a small red-tinted pill at the bottom right of the body
-        // (same danger style as the confirm dialog), away from the everyday
-        // controls. Deletes right away; the toast has Undo.
+        // Remove — a small red-tinted pill at the bottom LEFT of the body
+        // (same danger style as the confirm dialog), diagonal from the Add
+        // button so a missed tap at Add can't land on it. Deletes right
+        // away; the toast has Undo.
         const removeLink = document.createElement('button');
         removeLink.type = 'button';
         removeLink.className = 'btn-sm btn-danger';
@@ -1909,8 +1998,8 @@
 
         const foot = document.createElement('div');
         foot.className = 'card-foot';
-        foot.appendChild(earlierWrap);
         foot.appendChild(removeLink);
+        foot.appendChild(earlierWrap);
 
         bodyDiv.appendChild(doseRow);
         bodyDiv.appendChild(foot);
@@ -2013,16 +2102,18 @@
             const saveBtn = document.createElement('button');
             saveBtn.className = 'icon-btn';
             saveBtn.type = 'button';
-            saveBtn.textContent = '✔';
+            saveBtn.innerHTML = ICONS.check;
             saveBtn.title = 'Save';
+            saveBtn.setAttribute('aria-label', 'Save');
             saveBtn.addEventListener('touchstart', (ev) => { ev.preventDefault(); saveEdit(e.id); });
             saveBtn.addEventListener('click', () => saveEdit(e.id));
 
             const cancelBtn = document.createElement('button');
             cancelBtn.className = 'icon-btn';
             cancelBtn.type = 'button';
-            cancelBtn.textContent = '✕';
+            cancelBtn.innerHTML = ICONS.x;
             cancelBtn.title = 'Cancel';
+            cancelBtn.setAttribute('aria-label', 'Cancel');
             cancelBtn.addEventListener('click', cancelEdit);
 
             tdActions.appendChild(saveBtn);
@@ -2031,16 +2122,18 @@
             const editBtn = document.createElement('button');
             editBtn.className = 'icon-btn';
             editBtn.type = 'button';
-            editBtn.textContent = '✎';
+            editBtn.innerHTML = ICONS.pencil;
             editBtn.title = 'Edit';
+            editBtn.setAttribute('aria-label', 'Edit entry');
             editBtn.dataset.action = 'edit-entry';
             editBtn.dataset.entryId = e.id;
 
             const delBtn = document.createElement('button');
             delBtn.className = 'icon-btn icon-danger';
             delBtn.type = 'button';
-            delBtn.textContent = '×';
+            delBtn.innerHTML = ICONS.x;
             delBtn.title = 'Remove this entry';
+            delBtn.setAttribute('aria-label', 'Remove entry');
             delBtn.dataset.action = 'remove-entry';
             delBtn.dataset.entryId = e.id;
 
@@ -2095,14 +2188,14 @@
       let diffMin = Math.floor((now - date) / 60000);
       const inFuture = diffMin < 0;
       if (inFuture) diffMin = Math.abs(diffMin);
-      if (diffMin < 1) return inFuture ? 'in <1m' : 'just now';
-      if (diffMin < 60) return `${diffMin}min ${inFuture ? '' : 'ago'}`.trim();
+      if (diffMin < 1) return inFuture ? 'in <1 min' : 'just now';
+      if (diffMin < 60) return `${diffMin} min ${inFuture ? '' : 'ago'}`.trim();
       const hours = Math.floor(diffMin / 60);
       const mins = diffMin % 60;
-      if (diffMin < 1440) return `${hours}h ${mins}min ${inFuture ? '' : 'ago'}`.trim();
+      if (diffMin < 1440) return `${hours} h ${mins} min ${inFuture ? '' : 'ago'}`.trim();
       const days = Math.floor(hours / 24);
       const remH = hours % 24;
-      return `${days}d ${remH}h ${inFuture ? '' : 'ago'}`.trim();
+      return `${days} d ${remH} h ${inFuture ? '' : 'ago'}`.trim();
     }
 
     function updateLastDoseLabels() {
@@ -2230,17 +2323,19 @@
         saveState();
         render();
 
-        // Focus the name field IMMEDIATELY — still inside the tap itself.
-        // Phones only open the keyboard for a focus that happens during a
-        // real user tap; even a tiny delay and iOS keeps the keyboard shut.
+        // Start renaming IMMEDIATELY — still inside the tap itself. Phones
+        // only open the keyboard for a focus that happens during a real user
+        // tap; even a tiny delay and iOS keeps the keyboard shut. Clicking
+        // the card's pencil button runs its handler synchronously, which
+        // unlocks the (normally read-only) title and focuses it.
         const card = document.querySelector(`[data-id="${newId}"]`);
         const newNameInput = card ? card.querySelector('.drug-title') : null;
-        if (newNameInput) {
-          newNameInput.focus();
-          newNameInput.select();
+        const pencil = card ? card.querySelector('.title-edit-btn') : null;
+        if (pencil) {
+          pencil.click();
           // Scrolling can wait until the keyboard starts sliding up
           setTimeout(() => {
-            newNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (newNameInput) newNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }, 60);
         }
       }
@@ -2411,9 +2506,11 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredInstallPrompt = e;
+      // If the install guide is already unfolded, swap the written steps
+      // for the real one-tap Install button
       const btn = $('#welcome-install-btn');
       const steps = $('#welcome-steps');
-      if (btn) { btn.hidden = false; steps.hidden = true; }
+      if (btn && !steps.hidden) { btn.hidden = false; steps.hidden = true; }
     });
 
     (function setupWelcome() {
@@ -2433,7 +2530,10 @@
       const isStandalone = navigator.standalone === true ||
                            window.matchMedia('(display-mode: standalone)').matches;
 
-      // Show only the install instructions that fit this phone/browser
+      // Show only the install instructions that fit this phone/browser.
+      // The steps stay folded behind the "Get it on your home screen" header
+      // so the whole welcome fits on one phone screen.
+      const installToggle = $('#welcome-install-toggle');
       if (isStandalone) {
         installSection.hidden = true; // already running as an installed app
       } else {
@@ -2453,6 +2553,16 @@
                    'On a computer: in Chrome or Edge, click the install icon at the right end of the address bar'];
         }
         stepsList.innerHTML = steps.map((s) => `<li>${s}</li>`).join('');
+
+        installToggle.addEventListener('click', () => {
+          const open = installToggle.getAttribute('aria-expanded') !== 'true';
+          installToggle.setAttribute('aria-expanded', String(open));
+          if (!open) { installBtn.hidden = true; stepsList.hidden = true; return; }
+          // Android with a real install prompt gets the one-tap button;
+          // everyone else gets the written steps
+          if (deferredInstallPrompt) { installBtn.hidden = false; stepsList.hidden = true; }
+          else { stepsList.hidden = false; installBtn.hidden = true; }
+        });
       }
 
       function openWelcome() {
