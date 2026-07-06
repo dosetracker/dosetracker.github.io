@@ -305,9 +305,9 @@
     .chev-btn svg { transition: transform var(--t-med) var(--ease); }
     .card:not(.collapsed) .chev-btn svg { transform: rotate(180deg); }
 
-    /* Quiet footer line inside the card body:
-       "Taken earlier?" on the left, Remove on the right. Both styled like
-       the page footer links so they never compete with the Add button. */
+    /* Footer line inside the card body: the quiet "Taken earlier?" link on
+       the left, and Remove on the right as a small danger pill (btn-sm
+       btn-danger) so it clearly reads as destructive. */
     .card-foot {
       display: flex; justify-content: space-between; align-items: center;
       gap: 12px; min-height: 28px;
@@ -320,7 +320,6 @@
       -webkit-tap-highlight-color: transparent;
     }
     .link-btn:hover { color: var(--muted); }
-    .link-btn.danger:hover { color: var(--danger); }
     .earlier-edit { display: flex; align-items: center; gap: 8px; }
     .earlier-edit .earlier-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
     input.earlier-time { width: auto; min-height: 36px; padding: 6px 10px; }
@@ -1889,11 +1888,12 @@
           saveState();
         });
 
-        // Remove — a small muted link at the bottom right of the body, away
-        // from the everyday controls. Deletes right away; the toast has Undo.
+        // Remove — a small red-tinted pill at the bottom right of the body
+        // (same danger style as the confirm dialog), away from the everyday
+        // controls. Deletes right away; the toast has Undo.
         const removeLink = document.createElement('button');
         removeLink.type = 'button';
-        removeLink.className = 'link-btn danger';
+        removeLink.className = 'btn-sm btn-danger';
         removeLink.textContent = 'Remove';
         removeLink.onclick = () => {
           const idx = state.drugs.findIndex(d => d.id === drug.id);

@@ -15,7 +15,7 @@
    deletes the old one, so nobody gets stuck on stale code.
    ============================================================================= */
 
-const CACHE_VERSION = '2026-07-06a';
+const CACHE_VERSION = '2026-07-06b';
 const CACHE_NAME = `med-tracker-${CACHE_VERSION}`;
 
 // Files the app cannot run without. If any of these fail to download,
