@@ -254,7 +254,6 @@
 
     .card-header {
       padding: 16px 16px 14px;
-      cursor: pointer;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -292,8 +291,45 @@
     }
     .repeat-btn:hover { background: rgba(86,193,171,0.22); }
 
-    /* Remove button only shows on an expanded card (same as before) */
-    .card.collapsed .remove { display: none; }
+    /* Chevron — the only control that expands/collapses a card */
+    .chev-btn {
+      width: 36px; height: 36px; flex-shrink: 0;
+      margin: -4px -10px -4px -6px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; padding: 0;
+      color: var(--muted); cursor: pointer; border-radius: 999px;
+      -webkit-tap-highlight-color: transparent;
+      transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+    }
+    .chev-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .chev-btn svg { transition: transform var(--t-med) var(--ease); }
+    .card:not(.collapsed) .chev-btn svg { transform: rotate(180deg); }
+
+    /* Quiet footer line inside the card body:
+       "Taken earlier?" on the left, Remove on the right. Both styled like
+       the page footer links so they never compete with the Add button. */
+    .card-foot {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; min-height: 28px;
+    }
+    .link-btn {
+      background: none; border: none; padding: 4px 0; cursor: pointer;
+      color: var(--faint); font-family: inherit; font-size: 13px; font-weight: 500;
+      text-decoration: underline; text-underline-offset: 3px;
+      transition: color var(--t-fast) var(--ease);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .link-btn:hover { color: var(--muted); }
+    .link-btn.danger:hover { color: var(--danger); }
+    .earlier-edit { display: flex; align-items: center; gap: 8px; }
+    .earlier-edit .earlier-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    input.earlier-time { width: auto; min-height: 36px; padding: 6px 10px; }
+    .earlier-cancel {
+      background: none; border: none; cursor: pointer; padding: 4px 8px;
+      color: var(--muted); font-size: 15px; line-height: 1; border-radius: 8px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .earlier-cancel:hover { color: var(--text); background: rgba(255,255,255,0.06); }
 
     /* Key numbers, designed to be readable at a glance: time since the last
        dose is the big number on the card — for pacing, "when" matters more
@@ -1515,15 +1551,8 @@
         const card = document.createElement('div');
         card.className = `card ${drug.expanded ? '' : 'collapsed'}`;
         card.dataset.id = drug.id;
-        card.onclick = (e) => {
-           // Prevent collapsing if clicking inputs, buttons, menus, OR the name field
-           if (e.target.closest('input, select, button, .color-picker')) return;
-           drug.expanded = !drug.expanded;
-           saveState();
-           // Toggle the class directly (instead of re-rendering everything) so
-           // the open/close animation can play. Sort order doesn't change here.
-           card.classList.toggle('collapsed', !drug.expanded);
-        };
+        // Expanding/collapsing happens ONLY via the chevron button in the
+        // top-right corner — taps elsewhere on the card never toggle it.
 
         const strip = document.createElement('div');
         strip.className = 'color-strip';
@@ -1578,23 +1607,23 @@
           actionsDiv.appendChild(repeatBtn);
         }
 
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'btn-sm remove';
-        removeBtn.textContent = 'Remove';
-        removeBtn.onclick = (e) => {
+        // Chevron — the only control that expands/collapses the card
+        const chevBtn = document.createElement('button');
+        chevBtn.type = 'button';
+        chevBtn.className = 'chev-btn';
+        chevBtn.setAttribute('aria-expanded', String(!!drug.expanded));
+        chevBtn.setAttribute('aria-label', drug.expanded ? 'Hide details' : 'Show details');
+        chevBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5 8 10.5 13 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        chevBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          // Remove right away; the toast offers a few seconds to undo.
-          const idx = state.drugs.findIndex(d => d.id === drug.id);
-          if (idx < 0) return;
-          const removed = state.drugs[idx];
-          state.drugs.splice(idx, 1);
-          saveState(); render();
-          showToast(`Removed ${removed.name || 'substance'}.`, 6000, 'Undo', () => {
-            state.drugs.splice(Math.min(idx, state.drugs.length), 0, removed);
-            saveState(); render();
-          });
-        };
-        actionsDiv.appendChild(removeBtn);
+          drug.expanded = !drug.expanded;
+          saveState();
+          // Toggle the class directly (instead of re-rendering everything) so
+          // the open/close animation can play. Sort order doesn't change here.
+          card.classList.toggle('collapsed', !drug.expanded);
+          chevBtn.setAttribute('aria-expanded', String(!!drug.expanded));
+          chevBtn.setAttribute('aria-label', drug.expanded ? 'Hide details' : 'Show details');
+        });
 
         // Colour dot: small button in front of the title; tapping it opens
         // a floating grid of the palette colours.
@@ -1663,6 +1692,7 @@
         topRow.appendChild(colorWrap);
         topRow.appendChild(nameInput);
         topRow.appendChild(actionsDiv);
+        topRow.appendChild(chevBtn);
 
         const meta = document.createElement('div');
         meta.className = 'meta';
@@ -1735,7 +1765,68 @@
         addBtn.className = 'add-btn';
         addBtn.textContent = 'Add';
 
-        const onAdd = () => addEntryStandard(drug.id, drug.name, numInput, unitSelect, drug.color);
+        // "Taken earlier?" — optionally backdate the next Add. A quiet link
+        // below the dose row swaps into a time field; while a time is set,
+        // the Add button says "Add at 21:30" so there's no ambiguity.
+        let earlierActive = false;
+
+        const earlierWrap = document.createElement('div');
+
+        const earlierLink = document.createElement('button');
+        earlierLink.type = 'button';
+        earlierLink.className = 'link-btn';
+        earlierLink.textContent = 'Taken earlier? Set time';
+
+        const earlierEdit = document.createElement('div');
+        earlierEdit.className = 'earlier-edit';
+        const earlierLabel = document.createElement('span');
+        earlierLabel.className = 'earlier-label';
+        earlierLabel.textContent = 'Taken at';
+        const timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.className = 'earlier-time';
+        timeInput.setAttribute('aria-label', 'Time taken');
+        const earlierCancel = document.createElement('button');
+        earlierCancel.type = 'button';
+        earlierCancel.className = 'earlier-cancel';
+        earlierCancel.textContent = '✕';
+        earlierCancel.setAttribute('aria-label', 'Cancel earlier time');
+        earlierEdit.appendChild(earlierLabel);
+        earlierEdit.appendChild(timeInput);
+        earlierEdit.appendChild(earlierCancel);
+
+        const updateAddLabel = () => {
+          addBtn.textContent = (earlierActive && timeInput.value) ? `Add at ${timeInput.value}` : 'Add';
+        };
+        earlierLink.addEventListener('click', () => {
+          earlierActive = true;
+          const now = new Date();
+          timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+          earlierWrap.replaceChildren(earlierEdit);
+          updateAddLabel();
+        });
+        earlierCancel.addEventListener('click', () => {
+          earlierActive = false;
+          earlierWrap.replaceChildren(earlierLink);
+          updateAddLabel();
+        });
+        timeInput.addEventListener('input', updateAddLabel);
+        earlierWrap.appendChild(earlierLink);
+
+        // The backdated timestamp for the next Add, or undefined for "now"
+        const earlierTs = () => {
+          if (!earlierActive || !timeInput.value) return undefined;
+          const [hh, mm] = timeInput.value.split(':').map(Number);
+          if (isNaN(hh) || isNaN(mm)) return undefined;
+          const d = new Date();
+          d.setHours(hh, mm, 0, 0);
+          // A time later than now means "yesterday evening" — e.g. entering
+          // 23:50 at 00:30 on a night that crossed midnight
+          if (d > new Date()) d.setDate(d.getDate() - 1);
+          return d;
+        };
+
+        const onAdd = () => addEntryStandard(drug.id, drug.name, numInput, unitSelect, drug.color, undefined, undefined, earlierTs());
         addBtn.addEventListener('click', (e) => { e.stopPropagation(); onAdd(); });
         numInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } });
         useNumpad(numInput, 'Add', onAdd);
@@ -1798,7 +1889,31 @@
           saveState();
         });
 
+        // Remove — a small muted link at the bottom right of the body, away
+        // from the everyday controls. Deletes right away; the toast has Undo.
+        const removeLink = document.createElement('button');
+        removeLink.type = 'button';
+        removeLink.className = 'link-btn danger';
+        removeLink.textContent = 'Remove';
+        removeLink.onclick = () => {
+          const idx = state.drugs.findIndex(d => d.id === drug.id);
+          if (idx < 0) return;
+          const removed = state.drugs[idx];
+          state.drugs.splice(idx, 1);
+          saveState(); render();
+          showToast(`Removed ${removed.name || 'substance'}.`, 6000, 'Undo', () => {
+            state.drugs.splice(Math.min(idx, state.drugs.length), 0, removed);
+            saveState(); render();
+          });
+        };
+
+        const foot = document.createElement('div');
+        foot.className = 'card-foot';
+        foot.appendChild(earlierWrap);
+        foot.appendChild(removeLink);
+
         bodyDiv.appendChild(doseRow);
+        bodyDiv.appendChild(foot);
 
         collapseWrap.appendChild(bodyDiv);
         card.appendChild(collapseWrap);
@@ -1999,7 +2114,7 @@
     }
 
     // --- Actions ---
-    function addEntryStandard(drugId, currentDrugName, numInput, unitSelect, colorAtEntry, explicitValue, explicitUnitRaw) {
+    function addEntryStandard(drugId, currentDrugName, numInput, unitSelect, colorAtEntry, explicitValue, explicitUnitRaw, tsOverride) {
       let value, unitRaw;
 
       if (explicitValue !== undefined) {
@@ -2023,7 +2138,7 @@
       }
 
       const unitNorm = normalizeUnit(unitRaw);
-      const ts = new Date();
+      const ts = tsOverride || new Date(); // "Taken earlier?" passes a backdated time
       const dosageText = displayValueUnit(value, unitRaw);
       const entry = { id: uid('e'), ts, drugId, drugNameAtEntry: currentDrugName, dosageText, value, unit: unitNorm, unitRaw, colorAtEntry };
       state.entries.push(entry);
@@ -2038,7 +2153,9 @@
 
       if (numInput) numInput.value = '';
       render();
-      showToast(`Added ${dosageText} of ${currentDrugName}`);
+      showToast(tsOverride
+        ? `Added ${dosageText} of ${currentDrugName} at ${timeStr(ts)}`
+        : `Added ${dosageText} of ${currentDrugName}`);
     }
 
     function startEdit(entryId) { editingId = entryId; render(); const inp = document.getElementById(`edit-num-${entryId}`); if (inp) inp.focus(); }
