@@ -298,6 +298,14 @@
       color: var(--faint);
     }
     .icon-btn.title-edit-btn:hover { color: var(--text); }
+    /* ⓘ beside the pencil, only on cards whose name is a known preset.
+       Opens the substance-info dialog (never the browser directly). */
+    .icon-btn.info-btn {
+      width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+      margin: -4px 0 -4px -2px; padding: 0;
+      color: var(--faint);
+    }
+    .icon-btn.info-btn:hover { color: var(--text); }
     input.drug-title.invalid { color: var(--danger); }
 
     /* Quick-pick chips: a thin, horizontally scrollable row of common
@@ -695,6 +703,8 @@
     .btn-danger:hover { background: rgba(239,110,102,0.22); }
     .btn-ghost { background: transparent; }
     .btn-ghost:hover { background: rgba(255,255,255,0.07); }
+    /* A real link dressed as a button (the "Open PsychonautWiki" action) */
+    a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 
     /* Share preview: the exact image about to be sent, scrollable if long */
     #share-preview-img {
@@ -719,6 +729,8 @@
       color: var(--text); margin: 0 0 6px;
     }
     .privacy-content .contact-line { text-align: center; font-size: 13.5px; margin: 14px 0 0; }
+    /* Compact disclosure lines — must not push the dialog past one screen */
+    .privacy-content .fine-print { font-size: 12.5px; color: var(--faint); margin: 0 0 12px; }
     .contact-line a { color: var(--accent-strong); text-underline-offset: 3px; }
     #welcome-again { display: block; margin: 12px auto 0; }
 
@@ -993,6 +1005,20 @@
     </div>
   </div>
 
+  <!-- Substance info: opened by the ⓘ on preset cards. Names PsychonautWiki
+       BEFORE anything external opens, so nobody mistakes the article for our
+       own content. The open action is a real link (new tab, no referrer). -->
+  <div id="wiki" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="wiki-title" style="display:none;">
+    <div class="modal" role="document">
+      <h4 id="wiki-title">Substance info</h4>
+      <p>Read about this substance on <strong>PsychonautWiki</strong>, an independent encyclopedia.</p>
+      <div class="actions">
+        <button class="btn btn-ghost" id="wiki-cancel">Cancel</button>
+        <a class="btn" id="wiki-open" href="#" target="_blank" rel="noopener noreferrer">Open PsychonautWiki ↗</a>
+      </div>
+    </div>
+  </div>
+
   <!-- Welcome-back prompt: offered when the log still holds entries from a
        previous night, so each night can start with a clean slate -->
   <div id="fresh-start" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="fresh-title" style="display:none;">
@@ -1063,6 +1089,7 @@
       </div>
       <div class="privacy-content">
         <p><em>Everything you track stays on your phone.</em> There is no server and no account — nothing is ever uploaded, and the app works fully offline. Anyone opening the app’s link just gets their own empty copy. To erase your data, use “Reset everything”.</p>
+        <p class="fine-print">DoseTracker is a logbook, not medical advice. Substance info links open PsychonautWiki, an independent encyclopedia.</p>
         <p>If a friend wants DoseTracker too, they can scan this code or type in the address:</p>
         <div class="qr-card">
           <!-- QR code for the app URL (generated once, works offline) -->
@@ -1188,23 +1215,29 @@
     const PRESETS = [
       { name: 'MDMA',       color: '#ec4899', unit: 'mg'   },
       { name: 'Ketamine',   color: '#3b82f6', unit: 'line' },
-      { name: 'Speed',      color: '#eab308', unit: 'line' },
+      { name: 'Speed',      color: '#eab308', unit: 'line', wiki: 'Amphetamine' },
       { name: 'Mephedrone', color: '#10b981', unit: 'line' },
       { name: '3-MMC',      color: '#06b6d4', unit: 'line' },
       { name: 'Cocaine',    color: '#e2e8f0', unit: 'line' },
       { name: 'GHB',        color: '#7dd3fc', unit: 'ml'   },
       { name: '2C-B',       color: '#8b5cf6', unit: 'mg'   },
       { name: 'LSD',        color: '#84cc16', unit: 'µg'   },
-      { name: 'Shrooms',    color: '#f59e0b', unit: 'g'    },
-      { name: 'Weed',       color: '#22c55e', unit: 'g'    },
+      { name: 'Shrooms',    color: '#f59e0b', unit: 'g',    wiki: 'Psilocybin mushrooms' },
+      { name: 'Weed',       color: '#22c55e', unit: 'g',    wiki: 'Cannabis' },
       { name: 'Alcohol',    color: '#ef4444', unit: 'unit' }
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
+    // `wiki` is the PsychonautWiki article title where it differs from our
+    // chip name (Speed → Amphetamine etc.); absent means same as `name`.
+    const presetWikiName = (p) => p.wiki || p.name;
+    const presetWikiUrl = (p) =>
+      'https://psychonautwiki.org/wiki/' + encodeURIComponent(presetWikiName(p).replace(/ /g, '_'));
 
     // Small inline icons (SVG, drawn locally — no network). Typed glyphs like
     // ✎ and ✕ render with different weights on every platform; these don't.
     const ICONS = {
       pencil: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
+      info:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M12 11.2v5"/><path d="M12 7.6h.01"/></svg>',
       check:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
       x:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
       repeat: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
@@ -1310,6 +1343,35 @@
     }
     btnYes.addEventListener('click', () => closeConfirm(true));
     btnNo.addEventListener('click', () => closeConfirm(false));
+
+    // --- Substance-info dialog (the ⓘ on preset cards) ---
+    // Shows WHOSE information it is (PsychonautWiki) before the browser
+    // opens, and gives mis-taps a cheap way out. The dialog itself makes
+    // no network request — only the link does, and only when tapped.
+    const wikiOverlay = $('#wiki');
+    const wikiTitle = $('#wiki-title');
+    const wikiOpenLink = $('#wiki-open');
+    let wikiLastFocused = null;
+    function openWikiDialog(preset) {
+      // "Speed (Amphetamine)" when the article is named differently
+      wikiTitle.textContent = preset.wiki ? `${preset.name} (${preset.wiki})` : preset.name;
+      wikiOpenLink.href = presetWikiUrl(preset);
+      wikiLastFocused = document.activeElement;
+      wikiOverlay.style.display = 'flex';
+      wikiOverlay.classList.add('show');
+      $('#wiki-cancel').focus();
+    }
+    function closeWikiDialog() {
+      wikiOverlay.classList.remove('show');
+      wikiOverlay.style.display = 'none';
+      if (wikiLastFocused && typeof wikiLastFocused.focus === 'function') wikiLastFocused.focus();
+    }
+    $('#wiki-cancel').addEventListener('click', closeWikiDialog);
+    wikiOpenLink.addEventListener('click', () => closeWikiDialog()); // link still opens; the dialog just tidies up
+    wikiOverlay.addEventListener('click', (e) => { if (e.target === wikiOverlay) closeWikiDialog(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && wikiOverlay.classList.contains('show')) { e.preventDefault(); closeWikiDialog(); }
+    });
     confirmOverlay.addEventListener('click', (e) => { if (e.target === confirmOverlay) closeConfirm(false); });
     document.addEventListener('keydown', (e) => {
       if (confirmOverlay.classList.contains('show')) {
@@ -1800,6 +1862,27 @@
         renameBtn.innerHTML = ICONS.pencil;
         renameBtn.addEventListener('click', (e) => { e.stopPropagation(); startTitleEdit(); });
 
+        // ⓘ beside the pencil, only when the name matches a preset — free-typed
+        // names get no link (we can't vouch for what article they'd map to).
+        // Opens the substance-info dialog, never the browser directly.
+        const infoBtn = document.createElement('button');
+        infoBtn.type = 'button';
+        infoBtn.className = 'icon-btn info-btn';
+        infoBtn.title = 'Substance info';
+        infoBtn.innerHTML = ICONS.info;
+        infoBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const p = findPreset(drug.name);
+          if (p) openWikiDialog(p);
+        });
+        // Shown/hidden in place so a rename (which doesn't re-render) updates it
+        const syncInfoBtn = () => {
+          const p = findPreset(drug.name);
+          infoBtn.style.display = p ? '' : 'none';
+          if (p) infoBtn.setAttribute('aria-label', `About ${drug.name} on PsychonautWiki`);
+        };
+        syncInfoBtn();
+
         // Invisible mirror of the title text: measured to shrink the input
         // to its content, so the pencil sits right next to the name instead
         // of at the far end of the row. Re-measured on every keystroke.
@@ -1921,6 +2004,7 @@
         topRow.appendChild(colorWrap);
         topRow.appendChild(nameInput);
         topRow.appendChild(renameBtn);
+        topRow.appendChild(infoBtn);
         topRow.appendChild(chevBtn);
         topRow.appendChild(sizer);
 
@@ -2159,6 +2243,7 @@
               `linear-gradient(180deg, ${hexToRgba(drug.color, 0.06)} 0%, rgba(0,0,0,0) 96px), ` +
               `linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%)`;
           }
+          syncInfoBtn(); // ⓘ appears/disappears with the new name
           saveState();
         });
         // Re-measure after every edit attempt (the value may have reverted)
