@@ -299,6 +299,42 @@
     }
     .icon-btn.title-edit-btn:hover { color: var(--text); }
     input.drug-title.invalid { color: var(--danger); }
+
+    /* Quick-pick chips: a thin, horizontally scrollable row of common
+       substances that appears under the title while it is being renamed.
+       Each chip carries the substance's signature colour as a small dot. */
+    .preset-row {
+      display: none;
+      gap: 7px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* the row hints at more content by clipping a chip */
+      margin: 8px 0 2px;
+    }
+    .preset-row.show { display: flex; }
+    .preset-row::-webkit-scrollbar { display: none; }
+    .preset-chip {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .preset-chip:hover { background: var(--surface-3); }
+    .preset-chip .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
     .name-error { color: var(--danger); font-size: 12px; margin: 0; display: none; }
 
     .btn-sm { padding: 8px 11px; font-size: 12.5px; min-height: 36px; }
@@ -1142,6 +1178,29 @@
     const palette = ['#ef4444','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
     const paletteNames = ['Red','Orange','Yellow','Lime','Green','Teal','Cyan','Blue','Violet','Pink'];
 
+    // Pre-set substances for the quick-pick chips shown while naming a card,
+    // ordered by how common they are on a dance floor. Each brings a fitting
+    // signature colour and the unit it is usually measured in. Cocaine and
+    // GHB use two off-palette colours (snow white, watery blue) because the
+    // palette has nothing fitting; every other colour is a palette colour so
+    // the colour menu shows it as selected. Typing one of these names by
+    // hand (any capitalisation) adopts the same colour and unit.
+    const PRESETS = [
+      { name: 'MDMA',       color: '#ec4899', unit: 'mg'   },
+      { name: 'Ketamine',   color: '#3b82f6', unit: 'line' },
+      { name: 'Speed',      color: '#eab308', unit: 'line' },
+      { name: 'Mephedrone', color: '#10b981', unit: 'line' },
+      { name: '3-MMC',      color: '#06b6d4', unit: 'line' },
+      { name: 'Cocaine',    color: '#e2e8f0', unit: 'line' },
+      { name: 'GHB',        color: '#7dd3fc', unit: 'ml'   },
+      { name: '2C-B',       color: '#8b5cf6', unit: 'mg'   },
+      { name: 'LSD',        color: '#84cc16', unit: 'µg'   },
+      { name: 'Shrooms',    color: '#f59e0b', unit: 'g'    },
+      { name: 'Weed',       color: '#22c55e', unit: 'g'    },
+      { name: 'Alcohol',    color: '#ef4444', unit: 'unit' }
+    ];
+    const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
+
     // Small inline icons (SVG, drawn locally — no network). Typed glyphs like
     // ✎ and ✕ render with different weights on every platform; these don't.
     const ICONS = {
@@ -1672,12 +1731,64 @@
         nameInput.setAttribute('autocapitalize', 'off');
         nameInput.setAttribute('spellcheck', 'false');
 
+        // Quick-pick chips: rebuilt every time the title enters edit mode so
+        // substances that already have a card tonight drop out of the row.
+        // Hiding after blur is delayed a beat — on phones the tap on a chip
+        // blurs the title first, and the chip must still exist to get the tap.
+        const presetRow = document.createElement('div');
+        presetRow.className = 'preset-row';
+        let presetHideTimer = null;
+        const hidePresetsSoon = () => {
+          presetHideTimer = setTimeout(() => presetRow.classList.remove('show'), 300);
+        };
+        const showPresets = () => {
+          clearTimeout(presetHideTimer);
+          presetRow.innerHTML = '';
+          const taken = new Set(state.drugs.filter(d => d.id !== drug.id).map(d => nameKey(d.name)));
+          for (const p of PRESETS) {
+            if (taken.has(nameKey(p.name))) continue;
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'preset-chip';
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            dot.style.background = p.color;
+            chip.appendChild(dot);
+            chip.appendChild(document.createTextNode(p.name));
+            // Keep the title focused on desktop so a click feels seamless
+            chip.addEventListener('mousedown', (ev) => ev.preventDefault());
+            chip.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              clearTimeout(presetHideTimer);
+              // End the rename BEFORE touching state: render() below clears
+              // the grid, which makes the still-focused title fire its blur
+              // handler mid-render — and that handler would save the old
+              // name right over the preset's. Blurring first settles it.
+              nameInput.blur();
+              drug.name = p.name;
+              drug.color = p.color;
+              drug.lastUnit = p.unit; // the dose row's unit picker reads this
+              saveState();
+              render();
+              // Flow straight into the dose: focusing the amount field opens
+              // our own number pad (the system keyboard stays closed)
+              if (drug.expanded) {
+                const numEl = document.querySelector(`[data-id="${drug.id}"] .dose-grid input`);
+                if (numEl) numEl.focus();
+              }
+            });
+            presetRow.appendChild(chip);
+          }
+          presetRow.classList.add('show');
+        };
+
         // The pencil that unlocks the title for renaming. Must focus the
         // input synchronously (inside the real tap) or iOS keeps the
         // keyboard closed — same rule as in the "+ Add substance" handler.
         const startTitleEdit = () => {
           nameInput.readOnly = false;
           nameInput.classList.add('editing');
+          showPresets();
           nameInput.focus();
           nameInput.select();
         };
@@ -1865,6 +1976,7 @@
         nameErr.textContent = 'Name already exists.';
 
         headerDiv.appendChild(topRow);
+        headerDiv.appendChild(presetRow);
         headerDiv.appendChild(nameErr);
         headerDiv.appendChild(meta);
         card.appendChild(headerDiv);
@@ -2004,6 +2116,10 @@
             autoUnit = 'g';
           }
 
+          // An exact pre-set name knows its unit best
+          const typedPreset = findPreset(proposed);
+          if (typedPreset) autoUnit = typedPreset.unit;
+
           if (autoUnit) {
             unitSelect.value = autoUnit;
           }
@@ -2025,10 +2141,30 @@
           }
           drug.name = proposed;
           renameBtn.setAttribute('aria-label', `Rename ${drug.name}`);
+          // Typed a known substance by hand? Adopt its canonical spelling,
+          // signature colour and unit, restyling in place — no render()
+          // here, because blur also fires on the way into the amount field
+          // and rebuilding the cards would destroy the field mid-focus.
+          const preset = findPreset(proposed);
+          if (preset) {
+            drug.name = preset.name;
+            nameInput.value = preset.name;
+            drug.color = preset.color;
+            drug.lastUnit = preset.unit;
+            unitSelect.value = preset.unit;
+            colorBtn.style.setProperty('--swatch', drug.color);
+            strip.style.background = drug.color;
+            card.style.borderColor = hexToRgba(drug.color, 0.28);
+            card.style.background =
+              `linear-gradient(180deg, ${hexToRgba(drug.color, 0.06)} 0%, rgba(0,0,0,0) 96px), ` +
+              `linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%)`;
+          }
           saveState();
         });
         // Re-measure after every edit attempt (the value may have reverted)
         nameInput.addEventListener('blur', sizeTitle);
+        // The chips linger briefly so a tap on one still lands (see above)
+        nameInput.addEventListener('blur', hidePresetsSoon);
 
         // Remove — a small red-tinted pill at the bottom LEFT of the body
         // (same danger style as the confirm dialog), diagonal from the Add
