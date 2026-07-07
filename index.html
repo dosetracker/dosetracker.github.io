@@ -558,22 +558,35 @@
       box-shadow: var(--shadow-soft);
       overflow: hidden;
     }
-    /* Title on its own line, the two buttons in a row below it */
+    /* Title (with the quiet "clear" beside it) on its own line, the two
+       main buttons in a row below it */
     .log-header {
       display: flex; flex-direction: column; align-items: flex-start;
       gap: 10px;
       padding: 14px 16px;
       border-bottom: 1px solid var(--border);
     }
+    .log-title-row { display: flex; align-items: center; gap: 4px; }
+    /* "clear" is deliberately small and colourless next to the title — it's
+       the rarely-needed action, demoted from the main button row */
+    .clear-log-btn {
+      border: none; background: none; cursor: pointer;
+      color: var(--faint); font-family: inherit;
+      font-size: 11.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      padding: 4px 9px; margin: -2px 0; border-radius: 999px;
+      transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+    }
+    .clear-log-btn:hover { color: var(--danger); background: var(--danger-soft); }
 
     /* The share button gets the accent treatment — it's the friendly action.
        "Start fresh" in the welcome-back prompt shares the same look. */
-    #share-log, #share-send, #fresh-clear, #wiki-open {
+    #share-log, #share-send, #fresh-clear, #wiki-open, #combo-show {
       color: var(--accent-strong);
       border-color: var(--accent-border);
       background: var(--accent-soft);
     }
-    #share-log:hover, #share-send:hover, #fresh-clear:hover, #wiki-open:hover { background: rgba(86,193,171,0.22); }
+    #share-log:hover, #share-send:hover, #fresh-clear:hover, #wiki-open:hover, #combo-show:hover { background: rgba(86,193,171,0.22); }
 
     .log-header h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
     .controls { display: flex; gap: 8px; }
@@ -720,6 +733,47 @@
     .wiki-modal p { max-width: 30ch; margin: 0 auto 18px; text-wrap: balance; }
     .wiki-modal .actions { flex-direction: column; gap: 8px; }
     .wiki-modal .actions .btn { width: 100%; }
+
+    /* ===== Combination checker =====
+       Picker step: one chip per TripSit chart group, pre-selected from
+       tonight's log. Results step: TripSit's verbatim verdicts, worst
+       first, each row edged in the verdict's chart colour (--st). */
+    .combo-modal { width: min(92vw, 440px); }
+    .combo-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .combo-head h4 { margin: 0; }
+    .combo-modal .combo-hint { font-size: 13.5px; margin: 0 0 10px; }
+    .combo-chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 12px; }
+    .combo-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 12px; border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface-2);
+      color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 600;
+      cursor: pointer;
+      transition: background var(--t-fast) var(--ease),
+                  border-color var(--t-fast) var(--ease),
+                  color var(--t-fast) var(--ease);
+    }
+    .combo-chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+    .combo-chip .tick { display: none; font-weight: 700; color: var(--accent-strong); }
+    .combo-chip.sel { border-color: var(--accent-border); background: var(--accent-soft); color: var(--text); }
+    .combo-chip.sel .tick { display: inline; }
+    .combo-modal .combo-note-line { font-size: 12.5px; color: var(--faint); margin: 0 0 10px; line-height: 1.5; }
+    #combo-show { width: 100%; }
+    #combo-show[disabled] { opacity: 0.45; cursor: default; }
+    .combo-row {
+      border: 1px solid var(--border-strong);
+      border-left: 4px solid var(--st, var(--border-strong));
+      background: var(--surface-2);
+      border-radius: 12px; padding: 10px 12px; margin: 0 0 8px;
+    }
+    .combo-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .combo-pair { font-weight: 700; font-size: 14px; }
+    .combo-status { font-weight: 700; font-size: 12.5px; color: var(--st, var(--muted)); text-align: right; }
+    .combo-modal .combo-tsnote { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    #combo-back { width: 100%; margin: 4px 0 0; }
+    .combo-modal .combo-attrib { font-size: 12px; color: var(--faint); margin: 14px 0 0; line-height: 1.5; }
+    .combo-attrib a { color: var(--accent-strong); text-underline-offset: 3px; }
 
     /* Share preview: the exact image about to be sent, scrollable if long */
     #share-preview-img {
@@ -970,10 +1024,13 @@
 
     <section class="log" aria-label="Dose log">
       <div class="log-header">
-        <h3>Tonight's log</h3>
+        <div class="log-title-row">
+          <h3>Tonight's log</h3>
+          <button id="clear-log" class="clear-log-btn" title="Clear the log">clear</button>
+        </div>
         <div class="controls">
           <button id="share-log" title="Send your current log as an image">Share with a friend</button>
-          <button id="clear-log" title="Clear the log">Clear log</button>
+          <button id="combo-open" title="Check your combination against TripSit's chart" aria-haspopup="dialog" aria-controls="combo">Check combinations</button>
         </div>
       </div>
       <table aria-label="Dose log">
@@ -1042,6 +1099,32 @@
         <a class="btn" id="wiki-open" href="#" target="_blank" rel="noopener noreferrer">Open PsychonautWiki ↗</a>
         <button class="btn btn-ghost" id="wiki-cancel">Cancel</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Combination checker: opens ONLY when the user asks (the button in the
+       log section). Pre-filled from tonight's log but confirmed by the user;
+       anything TripSit's chart doesn't cover is named as excluded, so
+       silence can never read as safety. Ratings come word-for-word from the
+       bundled TripSit snapshot — the app itself rates nothing. -->
+  <div id="combo" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="combo-title" style="display:none;">
+    <div class="modal combo-modal" role="document">
+      <div class="combo-head">
+        <h4 id="combo-title">Check combinations</h4>
+        <div class="actions"><button class="btn btn-ghost" id="combo-close">Close</button></div>
+      </div>
+      <div id="combo-picker">
+        <p class="combo-hint">Select what was taken — TripSit's chart rates these in combination:</p>
+        <div class="combo-chips" id="combo-chips"></div>
+        <p class="combo-note-line" id="combo-matched" hidden></p>
+        <p class="combo-note-line" id="combo-unmatched" hidden></p>
+        <button class="btn" id="combo-show">Show TripSit's ratings</button>
+      </div>
+      <div id="combo-results" hidden>
+        <div id="combo-list"></div>
+        <button class="btn btn-ghost" id="combo-back">Change selection</button>
+      </div>
+      <p class="combo-attrib">Ratings by <a href="https://combo.tripsit.me/" target="_blank" rel="noopener noreferrer">TripSit</a>, shown word-for-word (snapshot <span id="combo-snapshot"></span>) — <a href="https://combo.tripsit.me/" target="_blank" rel="noopener noreferrer">see the live chart&nbsp;↗</a></p>
     </div>
   </div>
 
@@ -1239,19 +1322,22 @@
     // palette has nothing fitting; every other colour is a palette colour so
     // the colour menu shows it as selected. Typing one of these names by
     // hand (any capitalisation) adopts the same colour and unit.
+    // `ts` is each preset's column on TripSit's combination chart.
+    // 3-MMC has none: TripSit deliberately hasn't charted it, and mapping it
+    // to mephedrone ourselves would be our judgment, not theirs.
     const PRESETS = [
-      { name: 'MDMA',       color: '#ec4899', unit: 'mg'   },
-      { name: 'Ketamine',   color: '#3b82f6', unit: 'line' },
-      { name: 'Speed',      color: '#eab308', unit: 'line', wiki: 'Amphetamine' },
-      { name: 'Mephedrone', color: '#10b981', unit: 'line' },
-      { name: '3-MMC',      color: '#06b6d4', unit: 'line' },
-      { name: 'Cocaine',    color: '#e2e8f0', unit: 'line' },
-      { name: 'GHB',        color: '#7dd3fc', unit: 'ml'   },
-      { name: '2C-B',       color: '#8b5cf6', unit: 'mg'   },
-      { name: 'LSD',        color: '#84cc16', unit: 'µg'   },
-      { name: 'Shrooms',    color: '#f59e0b', unit: 'g',    wiki: 'Psilocybin mushrooms' },
-      { name: 'Weed',       color: '#22c55e', unit: 'g',    wiki: 'Cannabis' },
-      { name: 'Alcohol',    color: '#ef4444', unit: 'unit' }
+      { name: 'MDMA',       color: '#ec4899', unit: 'mg',   ts: 'mdma' },
+      { name: 'Ketamine',   color: '#3b82f6', unit: 'line', ts: 'ketamine' },
+      { name: 'Speed',      color: '#eab308', unit: 'line', ts: 'amphetamines', wiki: 'Amphetamine' },
+      { name: 'Mephedrone', color: '#10b981', unit: 'line', ts: 'mephedrone' },
+      { name: '3-MMC',      color: '#06b6d4', unit: 'line', ts: null },
+      { name: 'Cocaine',    color: '#e2e8f0', unit: 'line', ts: 'cocaine' },
+      { name: 'GHB',        color: '#7dd3fc', unit: 'ml',   ts: 'ghb/gbl' },
+      { name: '2C-B',       color: '#8b5cf6', unit: 'mg',   ts: '2c-x' },
+      { name: 'LSD',        color: '#84cc16', unit: 'µg',   ts: 'lsd' },
+      { name: 'Shrooms',    color: '#f59e0b', unit: 'g',    ts: 'mushrooms', wiki: 'Psilocybin mushrooms' },
+      { name: 'Weed',       color: '#22c55e', unit: 'g',    ts: 'cannabis', wiki: 'Cannabis' },
+      { name: 'Alcohol',    color: '#ef4444', unit: 'unit', ts: 'alcohol' }
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
     // `wiki` is the PsychonautWiki article title where it differs from our
@@ -1259,6 +1345,45 @@
     const presetWikiName = (p) => p.wiki || p.name;
     const presetWikiUrl = (p) =>
       'https://psychonautwiki.org/wiki/' + encodeURIComponent(presetWikiName(p).replace(/ /g, '_'));
+
+    // ===== TripSit combination data (offline snapshot) =====
+    // A small, attributed extract of TripSit's combination chart
+    // (combo.tripsit.me): verbatim pair ratings among the groups below, plus
+    // TripSit's own name/alias table so free-typed entries like "xanax" can
+    // be recognised. Regenerated by scripts/update-tripsit.py — do not edit
+    // by hand, and refresh it every few months so it can't drift stale.
+    // TRIPSIT-DATA-START (auto-generated)
+    const TRIPSIT = {"snapshot":"2026-07-08","pairs":{"ketamine|mdma":{"s":"Low Risk & Synergy","n":"No unexpected interactions, though likely to increase blood pressure but not an issue with sensible doses. Moving around on high doses of  this combination may be ill advised due to risk of physical injury."},"amphetamines|mdma":{"s":"Caution","n":"This combination of stimulants will increase strain on the heart, may cause some physical discomfort, and has the chance to cause cardiovascular issues. The anxiogenic and focusing effects of stimulants can increase the chance of unpleasant thought loops and make the experience more uncomfortable, this combination raises these chances. Amphetamines will increase the neurotoxic effects of MDMA, in addition to causing further concerns of hyperthermia due to the inherent nature of the combination. It will also raise one's body temperature, also likely making the combination more neurotoxic."},"mdma|mephedrone":{"s":"Dangerous","n":"Risk of serotonin syndrome as both drugs raise serotonin levels. Stimulants also increase the neurotoxic effects of MDMA, in addition to concerns of high blood pressure and unnecessary strain on the heart. As well as potentially causing anxiety and greater physical discomfort due to the combination."},"cocaine|mdma":{"s":"Caution","n":"Cocaine blocks some of the desirable effects of MDMA while increasing the risk of heart attack."},"ghb/gbl|mdma":{"s":"Caution","n":"Large amounts of GHB/GBL may overwhelm the effects of MDMA on the comedown."},"2c-x|mdma":{"s":"Low Risk & Synergy"},"lsd|mdma":{"s":"Low Risk & Synergy"},"mdma|mushrooms":{"s":"Low Risk & Synergy"},"cannabis|mdma":{"s":"Low Risk & Synergy","n":"Large amounts of cannabis may cause strong and somewhat unpredictable experiences in combination with MDMA. Cannabis should be saved for towards the end of the experience if possible."},"alcohol|mdma":{"s":"Caution","n":"The combination of MDMA and alcohol may increase strain on the cardiovascular system and lead to increased alcohol consumption. MDMA may also impair one's ability to recognize their level of drunkenness, leading to increased alcohol consumption and poor decision-making. Alcohol may also increase the risk of dehydration and hyperthermia (increased body temperature) when combined with MDMA."},"benzodiazepines|mdma":{"s":"Low Risk & Decrease"},"mdma|opioids":{"s":"Low Risk & No Synergy"},"caffeine|mdma":{"s":"Caution","n":"Caffeine is not really necessary with MDMA and increases any neurotoxic effects from MDMA"},"mdma|nitrous":{"s":"Low Risk & Synergy"},"amphetamines|ketamine":{"s":"Caution","n":"No unexpected interactions, though likely to increase blood pressure but not an issue with sensible doses. Moving around on high doses of this combination may be ill advised due to risk of physical injury."},"cocaine|ketamine":{"s":"Caution","n":"No unexpected interactions, though likely to increase blood pressure but not an issue with sensible doses. Moving around on high doses of this combination may be ill advised due to risk of physical injury."},"ghb/gbl|ketamine":{"s":"Dangerous","n":"Both substances cause ataxia and bring a risk of vomiting and unconsciousness. If the user falls unconscious while under the influence there is a severe risk of vomit aspiration if they are not placed in the recovery position."},"2c-x|ketamine":{"s":"Low Risk & Synergy"},"ketamine|lsd":{"s":"Low Risk & Synergy"},"ketamine|mushrooms":{"s":"Low Risk & Synergy"},"cannabis|ketamine":{"s":"Low Risk & Synergy"},"alcohol|ketamine":{"s":"Dangerous","n":"Both substances cause ataxia and bring a very high risk of vomiting and unconsciousness. If the user falls unconscious while under the influence there is a severe risk of vomit aspiration if they are not placed in the recovery position."},"benzodiazepines|ketamine":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position."},"ketamine|opioids":{"s":"Dangerous","n":"Both substances bring a risk of vomiting and unconsciousness. If the user falls unconscious while under the influence there is a severe risk of vomit aspiration if they are not placed in the recovery position."},"caffeine|ketamine":{"s":"Low Risk & No Synergy","n":"No unexpected interactions."},"ketamine|nitrous":{"s":"Low Risk & Synergy"},"amphetamines|cocaine":{"s":"Caution","n":"This combination of stimulants will increase strain on the heart. It is not generally worth it as cocaine has a mild blocking effect on dopamine releasers like amphetamine"},"amphetamines|ghb/gbl":{"s":"Caution","n":"Stimulants increase respiration rate allowing for a higher dose of sedatives. If the stimulant wears off first then the opiate may overcome the individual and cause respiratory arrest."},"2c-x|amphetamines":{"s":"Caution","n":"The anxiogenic and focusing effects of stimulants increase the chance of unpleasant thought loops. The combination is generally unnecessary because of the stimulating effects of psychedelics. Combination of the stimulating effects may be uncomfortable."},"amphetamines|lsd":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"amphetamines|mushrooms":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"amphetamines|cannabis":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"alcohol|amphetamines":{"s":"Caution","n":"Drinking on stimulants is risky because the sedative effects of the alcohol are reduced, and these are what the body uses to gauge drunkenness. This typically leads to excessive drinking with greatly reduced inhibitions, high risk of liver damage and increased dehydration. They will also allow you to drink past a point where you might normally pass out, increasing the risk. If you do decide to do this then you should set a limit of how much you will drink each hour and stick to it, bearing in mind that you will feel the alcohol and the stimulant less. Extended release formulations may severely impede sleep, further worsening the hangover."},"amphetamines|benzodiazepines":{"s":"Low Risk & Decrease","n":"Both can dull each other's effects, so if one wears off before the other it's possible to overdose due to the lack of counteraction"},"amphetamines|opioids":{"s":"Caution","n":"Stimulants increase respiration rate, which can allow for a higher dose of opiates normal . If the stimulant wears off first then the opiate may overcome the individual and cause respiratory arrest."},"amphetamines|caffeine":{"s":"Caution","n":"This combination of stimulants is not generally necessary and may increase strain on the heart, as well as potentially causing anxiety and greater physical discomfort."},"amphetamines|nitrous":{"s":"Low Risk & Synergy"},"ghb/gbl|mephedrone":{"s":"Caution","n":"Both can dull each other's effects, so if one wears off before the other it's possible to overdose due to the lack of counteraction. Both substances affect the heart and may lead to further dangerous heart complications at higher dosages. Additionally, the combination may increase the negative side effects of each other."},"lsd|mephedrone":{"s":"Caution","n":"The anxiogenic and focusing effects of stimulants increase the chance of unpleasant thought loops, in addition to the possible negative side effects of coming down from said stimulant while on a psychedelic. In extreme cases, stimulants, especially in combination can result in severe vasoconstriction, tachycardia, hypertension, and heart failure."},"mephedrone|mushrooms":{"s":"Low Risk & Synergy","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"mephedrone|opioids":{"s":"Caution","n":"Stimulants increase respiration rate allowing a higher dose of opiates. If the stimulant wears off first then the opiate may overcome the patient and cause respiratory arrest."},"caffeine|mephedrone":{"s":"Caution","n":"This combination of stimulants is not generally necessary and may increase strain on the heart, as well as potentially causing anxiety and great physical discomfort. However, individual responses to caffeine can vary significantly, often influenced by factors like habitual versus occasional usage."},"cocaine|ghb/gbl":{"s":"Caution","n":"Stimulants increase respiration rate allowing for a higher dose of sedatives than normal. If the stimulant wears off first the opiate may overcome the individual and cause respiratory arrest. Likewise the ghb/gbl can wear off and leave a dangerous concentration of cocaine behind"},"2c-x|cocaine":{"s":"Caution","n":"The anxiogenic and focusing effects of stimulants increase the chance of unpleasant thought loops. The combination is generally unnecessary because of the stimulating effects of psychedelics. Combination of the stimulating effects may be uncomfortable."},"cocaine|lsd":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"cocaine|mushrooms":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"cannabis|cocaine":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"alcohol|cocaine":{"s":"Unsafe","n":"Cocaine can decrease some of the intoxicating effects of alcohol, causing some people to drink more than they otherwise would, which leads to greater behavioral and physical health risks. There is also some debate about cocaethylene, a metabolite produced when combining alcohol and cocaine, with some researchers positing that it is more cardiotoxic than cocaine on its own. Use moderation when combining these substances."},"benzodiazepines|cocaine":{"s":"Low Risk & Decrease"},"cocaine|opioids":{"s":"Dangerous","n":"Stimulants increase respiration rate allowing for a higher dose of opiates than normal. If the stimulant wears off first then the opiate may overcome the individual and cause respiratory arrest."},"caffeine|cocaine":{"s":"Caution","n":"Both stimulants, risk of tachycardia, hypertension, and in extreme cases heart failure."},"cocaine|nitrous":{"s":"Low Risk & Synergy"},"2c-x|ghb/gbl":{"s":"Low Risk & Decrease"},"ghb/gbl|lsd":{"s":"Low Risk & Decrease"},"ghb/gbl|mushrooms":{"s":"Low Risk & Decrease"},"cannabis|ghb/gbl":{"s":"Low Risk & Synergy"},"alcohol|ghb/gbl":{"s":"Dangerous","n":"Even in very low doses this combination rapidly leads to memory loss, severe ataxia and unconsciousness. There is a high risk of vomit aspiration while unconscious."},"benzodiazepines|ghb/gbl":{"s":"Dangerous","n":"The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position."},"ghb/gbl|opioids":{"s":"Dangerous","n":"The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position"},"caffeine|ghb/gbl":{"s":"Low Risk & No Synergy"},"ghb/gbl|nitrous":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Memory blackouts are likely."},"2c-x|lsd":{"s":"Low Risk & Synergy"},"2c-x|mushrooms":{"s":"Low Risk & Synergy"},"2c-x|cannabis":{"s":"Caution","n":"Cannabis has an unexpectedly strong and somewhat unpredictable synergy with psychedelics."},"2c-x|alcohol":{"s":"Low Risk & Decrease"},"2c-x|benzodiazepines":{"s":"Low Risk & Decrease"},"2c-x|opioids":{"s":"Low Risk & No Synergy"},"2c-x|caffeine":{"s":"Low Risk & No Synergy","n":"High doses of caffeine may cause anxiety which is less manageable when tripping, and since both are stimulating the combination may cause some physical discomfort."},"2c-x|nitrous":{"s":"Low Risk & Synergy"},"lsd|mushrooms":{"s":"Low Risk & Synergy"},"cannabis|lsd":{"s":"Caution","n":"Cannabis has an unexpectedly strong and somewhat unpredictable synergy with psychedelics."},"alcohol|lsd":{"s":"Low Risk & Decrease"},"benzodiazepines|lsd":{"s":"Low Risk & Decrease"},"lsd|opioids":{"s":"Low Risk & No Synergy"},"caffeine|lsd":{"s":"Low Risk & No Synergy"},"lsd|nitrous":{"s":"Low Risk & Synergy"},"cannabis|mushrooms":{"s":"Caution","n":"Cannabis has an unexpectedly strong and somewhat unpredictable synergy with psychedelics."},"alcohol|mushrooms":{"s":"Low Risk & Decrease"},"benzodiazepines|mushrooms":{"s":"Low Risk & Decrease"},"mushrooms|opioids":{"s":"Low Risk & No Synergy"},"caffeine|mushrooms":{"s":"Low Risk & No Synergy"},"mushrooms|nitrous":{"s":"Low Risk & Synergy"},"alcohol|cannabis":{"s":"Low Risk & Synergy","n":"In excess, this combination can cause nausea."},"benzodiazepines|cannabis":{"s":"Low Risk & Decrease"},"cannabis|opioids":{"s":"Low Risk & Synergy"},"caffeine|cannabis":{"s":"Low Risk & No Synergy"},"cannabis|nitrous":{"s":"Low Risk & Synergy"},"alcohol|benzodiazepines":{"s":"Dangerous","n":"Ethanol ingestion may potentiate the CNS effects of many benzodiazepines. The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Blacking out and memory loss is almost certain."},"alcohol|opioids":{"s":"Dangerous","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. Place the affected individual in the recovery position to prevent vomit aspiration from excess. Memory blackouts are likely"},"alcohol|caffeine":{"s":"Low Risk & No Synergy"},"alcohol|nitrous":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Memory blackouts are likely."},"benzodiazepines|opioids":{"s":"Dangerous","n":"Central nervous system and/or respiratory-depressant effects may be additively or synergistically present. The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position Blackouts/memory loss likely"},"benzodiazepines|caffeine":{"s":"Low Risk & Decrease"},"benzodiazepines|nitrous":{"s":"Low Risk & Decrease"},"caffeine|opioids":{"s":"Low Risk & No Synergy"},"nitrous|opioids":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Memory blackouts are likely."},"caffeine|nitrous":{"s":"Low Risk & No Synergy"}},"names":{"2cb":"2c-x","bees":"2c-x","nexus":"2c-x","2cban":"2c-x","2cbfly":"2c-x","2cbflynbome":"2c-x","2cc":"2c-x","2cd":"2c-x","2cm":"2c-x","2ce":"2c-x","2cg":"2c-x","2cg5":"2c-x","2ci":"2c-x","2cip":"2c-x","2cn":"2c-x","2cp":"2c-x","2ct":"2c-x","2ct2":"2c-x","2ct4":"2c-x","2ct7":"2c-x","2ct21":"2c-x","3ohphenazepam":"benzodiazepines","3hophenazepam":"benzodiazepines","3hop":"benzodiazepines","3ohp":"benzodiazepines","3hydroxyphenazepam":"benzodiazepines","4meobutryfentanyl":"opioids","4meobutyrfentanyl":"opioids","4meobf":"opioids","6mddm":"opioids","6methylenedihydrodesoxymorphine":"opioids","acetylfentanyl":"opioids","af":"opioids","acrylfentanyl":"opioids","ah7921":"opioids","alcohol":"alcohol","etoh":"alcohol","beer":"alcohol","ethanol":"alcohol","booze":"alcohol","hooch":"alcohol","alprazolam":"benzodiazepines","xanax":"benzodiazepines","prazolam":"benzodiazepines","ksalol":"benzodiazepines","niravam":"benzodiazepines","amphetamine":"amphetamines","speed":"amphetamines","pepp":"amphetamines","amphetamines":"amphetamines","amphetamin":"amphetamines","amfetamine":"amphetamines","amph":"amphetamines","hearts":"amphetamines","pep":"amphetamines","bentazepam":"benzodiazepines","thiadipone":"benzodiazepines","tiadipona":"benzodiazepines","benzodioxolefentanyl":"opioids","bromadol":"opioids","bdpc":"opioids","bromazepam":"benzodiazepines","lectopam":"benzodiazepines","lexilium":"benzodiazepines","lexotan":"benzodiazepines","brazepam":"benzodiazepines","lexotanil":"benzodiazepines","bromazolam":"benzodiazepines","xli268":"benzodiazepines","brotizolam":"benzodiazepines","lendormin":"benzodiazepines","buprenorphine":"opioids","suboxone":"opioids","subs":"opioids","bupe":"opioids","butyrfentanyl":"opioids","bf":"opioids","caffeine":"caffeine","coffee":"caffeine","camazepam":"benzodiazepines","albego":"benzodiazepines","limpidon":"benzodiazepines","paxor":"benzodiazepines","cannabis":"cannabis","weed":"cannabis","thc":"cannabis","marijuana":"cannabis","dagga":"cannabis","hash":"cannabis","clobazam":"benzodiazepines","frisium":"benzodiazepines","clonazepam":"benzodiazepines","klonopin":"benzodiazepines","kpin":"benzodiazepines","clonazolam":"benzodiazepines","clam":"benzodiazepines","cloniprazepam":"benzodiazepines","clonitazene":"opioids","clorazepate":"benzodiazepines","tranxene":"benzodiazepines","novoclopate":"benzodiazepines","tranzene":"benzodiazepines","clotiazepam":"benzodiazepines","clozan":"benzodiazepines","distensan":"benzodiazepines","trecalmo":"benzodiazepines","rize":"benzodiazepines","rizen":"benzodiazepines","veratran":"benzodiazepines","cocaine":"cocaine","coke":"cocaine","codeine":"opioids","cyclopentylfentanyl":"opioids","cpf":"opioids","delorazepam":"benzodiazepines","nordiclazepam":"benzodiazepines","demerol":"opioids","pethidine":"opioids","meperidine":"opioids","deschloroetizolam":"benzodiazepines","etizolam2":"benzodiazepines","desmethylflunitrazepam":"benzodiazepines","fonazepam":"benzodiazepines","ro054435":"benzodiazepines","norflunitrazepam":"benzodiazepines","dextropropoxyphene":"opioids","darvocet":"opioids","coproxamol":"opioids","capadex":"opioids","digesic":"opioids","diazepam":"benzodiazepines","valium":"benzodiazepines","diclazepam":"benzodiazepines","dihydrocodeine":"opioids","dhc":"opioids","dipipanone":"opioids","diconal":"opioids","estazolam":"benzodiazepines","prosom":"benzodiazepines","eurodin":"benzodiazepines","elprazolam":"benzodiazepines","ethylmorphine":"opioids","etizolam":"benzodiazepines","etiz":"benzodiazepines","etizest":"benzodiazepines","etilaam":"benzodiazepines","sedekopan":"benzodiazepines","depas":"benzodiazepines","etizola":"benzodiazepines","inxity":"benzodiazepines","zoly":"benzodiazepines","lamet":"benzodiazepines","towa":"benzodiazepines","fentanyl":"opioids","fent":"opioids","flualprazolam":"benzodiazepines","flubromazepam":"benzodiazepines","flubromazolam":"benzodiazepines","flam":"benzodiazepines","fluclotizolam":"benzodiazepines","flunitrazepam":"benzodiazepines","roofies":"benzodiazepines","rohypnol":"benzodiazepines","flunitrazolam":"benzodiazepines","fln":"benzodiazepines","flurazepam":"benzodiazepines","dalmane":"benzodiazepines","flutazolam":"benzodiazepines","flutoprazepam":"benzodiazepines","restas":"benzodiazepines","furanylfentanyl":"opioids","fuf":"opioids","gbl":"ghb/gbl","ghb":"ghb/gbl","glaucine":"opioids","halazepam":"benzodiazepines","paxipam":"benzodiazepines","heroin":"opioids","diamorphine":"opioids","hydrocodone":"opioids","vicodin":"opioids","hydro":"opioids","hydromorphone":"opioids","dilaudid":"opioids","diluadid":"opioids","ibogaine":"opioids","iboga":"opioids","ic26":"opioids","methiodone":"opioids","isomethadone":"opioids","ketamine":"ketamine","k":"ketamine","ket":"ketamine","kitty":"ketamine","kittens":"ketamine","specialk":"ketamine","ketobemidone":"opioids","kbd":"opioids","kratom":"opioids","librium":"benzodiazepines","chlordiazepoxide":"benzodiazepines","lorazepam":"benzodiazepines","ativan":"benzodiazepines","lormetazepam":"benzodiazepines","noctamid":"benzodiazepines","lsd":"lsd","lsd25":"lsd","acid":"lsd","cid":"lsd","lucy":"lsd","mdma":"mdma","molly":"mdma","ecstasy":"mdma","adam":"mdma","xtc":"mdma","mandy":"mdma","x":"mdma","md":"mdma","meclonazepam":"benzodiazepines","medazepam":"benzodiazepines","nobrium":"benzodiazepines","azepamid":"benzodiazepines","rudotel":"benzodiazepines","raporan":"benzodiazepines","mezapam":"benzodiazepines","talis":"benzodiazepines","mephedrone":"mephedrone","4mmc":"mephedrone","meowmeow":"mephedrone","mcat":"mephedrone","4methylmethcathinone":"mephedrone","methadone":"opioids","methoxyacetylfentanyl":"opioids","maf":"opioids","desfluoroocfentanil":"opioids","metizolam":"benzodiazepines","metiz":"benzodiazepines","desmethyletizolam":"benzodiazepines","midazolam":"benzodiazepines","morpheridine":"opioids","morphine":"opioids","mt45":"opioids","ic6":"opioids","mushrooms":"mushrooms","psilocybin":"mushrooms","shrooms":"mushrooms","mushroom":"mushrooms","psylocybin":"mushrooms","nicomorphine":"opioids","nifoxipam":"benzodiazepines","nimetazepam":"benzodiazepines","erimin":"benzodiazepines","nitemazepam":"benzodiazepines","3hydroxynimetazepam":"benzodiazepines","nitrazepam":"benzodiazepines","mogadon":"benzodiazepines","baronite":"benzodiazepines","dormin":"benzodiazepines","dreem":"benzodiazepines","enzed":"benzodiazepines","gentravit":"benzodiazepines","hypnonex":"benzodiazepines","hypnoril":"benzodiazepines","hypnotex":"benzodiazepines","konit":"benzodiazepines","nicare":"benzodiazepines","nigap":"benzodiazepines","nipam":"benzodiazepines","nirosun":"benzodiazepines","nitavan":"benzodiazepines","nithra":"benzodiazepines","nitrazolam":"benzodiazepines","nitrous":"nitrous","n2o":"nitrous","laughinggas":"nitrous","n20":"nitrous","nos":"nitrous","nitrousoxide":"nitrous","hippycrack":"nitrous","nordazepam":"benzodiazepines","nordaz":"benzodiazepines","nordiazepam":"benzodiazepines","desmethyldiazepam":"benzodiazepines","norflurazepam":"benzodiazepines","ndesalkylflurazepam":"benzodiazepines","odesmethyltramadol":"opioids","odt":"opioids","osmt":"opioids","odsmt":"opioids","opium":"opioids","o":"opioids","oxazepam":"benzodiazepines","serax":"benzodiazepines","oxycodone":"opioids","oxy":"opioids","oxycontin":"opioids","percocet":"opioids","oxynorm":"opioids","oxymorphone":"opioids","opana":"opioids","stopsigns":"opioids","palfium":"opioids","dextromoramide":"opioids","parafluorobutyrfentanyl":"opioids","4fluorobutyrfentanyl":"opioids","pfbf":"opioids","4fbf":"opioids","parafluorofentanyl":"opioids","pff":"opioids","4fluorofentanyl":"opioids","pentazocine":"opioids","talwin":"opioids","phenazepam":"benzodiazepines","pinazepam":"benzodiazepines","domar":"benzodiazepines","prazepam":"benzodiazepines","centrac":"benzodiazepines","centrax":"benzodiazepines","demetrin":"benzodiazepines","lysanxia":"benzodiazepines","pozapam":"benzodiazepines","prasepine":"benzodiazepines","prazene":"benzodiazepines","reapam":"benzodiazepines","trepidan":"benzodiazepines","propoxyphene":"opioids","pst":"opioids","poppyseedtea":"opioids","poppytea":"opioids","pyrazolam":"benzodiazepines","quazepam":"benzodiazepines","doral":"benzodiazepines","rilmazafone":"benzodiazepines","rhythmy":"benzodiazepines","sufentanil":"opioids","tapentadol":"opioids","temazepam":"benzodiazepines","restoril":"benzodiazepines","tetrahydrofuranfentanyl":"opioids","thff":"opioids","tetrazepam":"benzodiazepines","tianeptine":"opioids","tilidine":"opioids","tilidate":"opioids","tilidin":"opioids","valoron":"opioids","valtran":"opioids","triazolam":"benzodiazepines","halcion":"benzodiazepines","u47700":"opioids","u49900":"opioids","u51754":"opioids","metheneu47700":"opioids","valerylfentanyl":"opioids","vf":"opioids","w15":"opioids","zolazepam":"benzodiazepines"}};
+    // TRIPSIT-DATA-END
+
+    // The chips offered in the combination picker: every charted preset,
+    // then four picker-only groups people take but rarely log. Muted dot
+    // colours mark the picker-only ones as "not one of your cards".
+    const COMBO_GROUPS = [
+      ...PRESETS.filter(p => p.ts).map(p => ({ id: p.ts, label: p.name, color: p.color })),
+      { id: 'benzodiazepines', label: 'Benzos',   color: '#8da2c0' },
+      { id: 'opioids',         label: 'Opioids',  color: '#b8a58f' },
+      { id: 'caffeine',        label: 'Caffeine', color: '#a2845e' },
+      { id: 'nitrous',         label: 'Nitrous',  color: '#d8dee6' }
+    ];
+    const comboGroupById = (id) => COMBO_GROUPS.find(g => g.id === id);
+    // TripSit's six verdicts, worst first, with chart-like colours
+    const TRIPSIT_STATUS = {
+      'Dangerous':             { rank: 0, color: '#ef6e66' },
+      'Unsafe':                { rank: 1, color: '#f0883e' },
+      'Caution':               { rank: 2, color: '#e3c04b' },
+      'Low Risk & Decrease':   { rank: 3, color: '#9fb0bf' },
+      'Low Risk & No Synergy': { rank: 4, color: '#86b7e0' },
+      'Low Risk & Synergy':    { rank: 5, color: '#68d391' }
+    };
+    const normTripsit = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Which chart column a logged name belongs to, if any: presets know
+    // theirs; everything else goes through TripSit's own alias table.
+    function tripsitGroupFor(name) {
+      const p = findPreset(name);
+      if (p) return p.ts || null;
+      return TRIPSIT.names[normTripsit(name)] || null;
+    }
 
     // Small inline icons (SVG, drawn locally — no network). Typed glyphs like
     // ✎ and ✕ render with different weights on every platform; these don't.
@@ -1398,6 +1523,152 @@
     wikiOverlay.addEventListener('click', (e) => { if (e.target === wikiOverlay) closeWikiDialog(); });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && wikiOverlay.classList.contains('show')) { e.preventDefault(); closeWikiDialog(); }
+    });
+
+    // --- Combination checker ---
+    // The user asks, the user confirms the selection, TripSit answers.
+    // Nothing here ever runs on its own while doses are being logged.
+    const comboOverlay = $('#combo');
+    const comboChipsEl = $('#combo-chips');
+    const comboMatched = $('#combo-matched');
+    const comboUnmatched = $('#combo-unmatched');
+    const comboShowBtn = $('#combo-show');
+    const comboPicker = $('#combo-picker');
+    const comboResults = $('#combo-results');
+    const comboList = $('#combo-list');
+    let comboSelected = new Set();
+    let comboLastFocused = null;
+
+    // A pair needs two sides — until then the button says why it's waiting
+    function comboUpdateShow() {
+      comboShowBtn.disabled = comboSelected.size < 2;
+      comboShowBtn.textContent = comboSelected.size < 2
+        ? 'Select at least two'
+        : "Show TripSit's ratings";
+    }
+
+    function renderComboChips() {
+      comboChipsEl.innerHTML = '';
+      for (const g of COMBO_GROUPS) {
+        const sel = comboSelected.has(g.id);
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'combo-chip' + (sel ? ' sel' : '');
+        chip.setAttribute('aria-pressed', String(sel));
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = g.color;
+        chip.appendChild(dot);
+        chip.appendChild(document.createTextNode(g.label));
+        const tick = document.createElement('span');
+        tick.className = 'tick';
+        tick.textContent = '✓';
+        chip.appendChild(tick);
+        chip.addEventListener('click', () => {
+          if (comboSelected.has(g.id)) comboSelected.delete(g.id);
+          else comboSelected.add(g.id);
+          renderComboChips();
+          comboUpdateShow();
+        });
+        comboChipsEl.appendChild(chip);
+      }
+    }
+
+    function openCombo() {
+      // Distinct substances in tonight's log — by the card's current name
+      // where the card still exists (so renames count), otherwise by the
+      // name that was logged at the time.
+      const seen = new Map();
+      for (const e of state.entries) {
+        const card = state.drugs.find(d => d.id === e.drugId);
+        const name = (card && card.name) || e.drugNameAtEntry || '';
+        if (!name || seen.has(nameKey(name))) continue;
+        seen.set(nameKey(name), { name, group: tripsitGroupFor(name) });
+      }
+      comboSelected = new Set();
+      const matchedBits = [], unmatchedBits = [];
+      for (const { name, group } of seen.values()) {
+        if (group) {
+          comboSelected.add(group);
+          const label = comboGroupById(group).label;
+          // "✓ Xanax → Benzos" when the logged name isn't the group's own
+          matchedBits.push(nameKey(label) === nameKey(name) ? `✓ ${label}` : `✓ ${name} → ${label}`);
+        } else {
+          unmatchedBits.push(`“${name}”`);
+        }
+      }
+      comboMatched.hidden = !matchedBits.length;
+      comboMatched.textContent = `From tonight's log: ${matchedBits.join('   ')}`;
+      comboUnmatched.hidden = !unmatchedBits.length;
+      comboUnmatched.textContent = `Not on TripSit's chart: ${unmatchedBits.join(', ')} — not included.`;
+      renderComboChips();
+      comboUpdateShow();
+      comboPicker.hidden = false;
+      comboResults.hidden = true;
+      $('#combo-snapshot').textContent = TRIPSIT.snapshot;
+      comboLastFocused = document.activeElement;
+      comboOverlay.style.display = 'flex';
+      comboOverlay.classList.add('show');
+      $('#combo-close').focus();
+    }
+
+    function renderComboResults() {
+      const ids = [...comboSelected];
+      const rows = [];
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          rows.push({
+            a: comboGroupById(ids[i]).label,
+            b: comboGroupById(ids[j]).label,
+            data: TRIPSIT.pairs[[ids[i], ids[j]].sort().join('|')]
+          });
+        }
+      }
+      // TripSit's own severity order, worst first; unrated pairs last
+      const rank = (r) => (r.data && TRIPSIT_STATUS[r.data.s]) ? TRIPSIT_STATUS[r.data.s].rank : 6;
+      rows.sort((r1, r2) => rank(r1) - rank(r2));
+      comboList.innerHTML = '';
+      for (const r of rows) {
+        const row = document.createElement('div');
+        row.className = 'combo-row';
+        const st = r.data && TRIPSIT_STATUS[r.data.s];
+        if (st) row.style.setProperty('--st', st.color);
+        const head = document.createElement('div');
+        head.className = 'combo-row-head';
+        const pair = document.createElement('span');
+        pair.className = 'combo-pair';
+        pair.textContent = `${r.a} + ${r.b}`;
+        const status = document.createElement('span');
+        status.className = 'combo-status';
+        status.textContent = r.data ? r.data.s : "No rating on TripSit's chart";
+        head.appendChild(pair);
+        head.appendChild(status);
+        row.appendChild(head);
+        if (r.data && r.data.n) {
+          const note = document.createElement('p');
+          note.className = 'combo-tsnote';
+          note.textContent = r.data.n; // TripSit's note, word for word
+          row.appendChild(note);
+        }
+        comboList.appendChild(row);
+      }
+      comboPicker.hidden = true;
+      comboResults.hidden = false;
+      comboOverlay.querySelector('.modal').scrollTop = 0;
+    }
+
+    function closeCombo() {
+      comboOverlay.classList.remove('show');
+      comboOverlay.style.display = 'none';
+      if (comboLastFocused && typeof comboLastFocused.focus === 'function') comboLastFocused.focus();
+    }
+    $('#combo-open').addEventListener('click', openCombo);
+    $('#combo-close').addEventListener('click', closeCombo);
+    $('#combo-back').addEventListener('click', () => { comboPicker.hidden = false; comboResults.hidden = true; });
+    comboShowBtn.addEventListener('click', () => { if (comboSelected.size >= 2) renderComboResults(); });
+    comboOverlay.addEventListener('click', (e) => { if (e.target === comboOverlay) closeCombo(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && comboOverlay.classList.contains('show')) { e.preventDefault(); closeCombo(); }
     });
     confirmOverlay.addEventListener('click', (e) => { if (e.target === confirmOverlay) closeConfirm(false); });
     document.addEventListener('keydown', (e) => {
