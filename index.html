@@ -779,6 +779,16 @@
     }
     .welcome-install-note { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; }
     .welcome-install-note[hidden] { display: none; }
+    /* Reassurance note under the steps: explains Android's generic Play Protect
+       warning so it doesn't read as "this app is unsafe". Quiet, boxed. */
+    .welcome-install-hint {
+      margin: 12px 0 0; padding: 10px 12px; text-align: left;
+      background: var(--accent-soft); border: 1px solid var(--accent-border);
+      border-radius: var(--radius-sm); color: var(--muted);
+      font-size: 12.5px; line-height: 1.5;
+    }
+    .welcome-install-hint[hidden] { display: none; }
+    .welcome-install-hint b { color: var(--accent-strong); }
     .welcome-steps { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.55; display: grid; gap: 7px; }
     .welcome-steps[hidden] { display: none; }
     .welcome-steps b { color: var(--accent-strong); }
@@ -1084,6 +1094,7 @@
         <p class="welcome-install-note" id="welcome-install-note" hidden>A friend can install it too:</p>
         <button class="btn" id="welcome-install-btn" hidden>Install the app</button>
         <ol class="welcome-steps" id="welcome-steps"></ol>
+        <p class="welcome-install-hint" id="welcome-install-hint" hidden></p>
       </div>
       <button class="btn welcome-start" id="welcome-start">Get started</button>
     </div>
@@ -2763,6 +2774,11 @@
     // Real Safari (not Chrome/Firefox/Edge on iOS, which have their own Share menus)
     const isIOSSafari = isIOS && /Safari/i.test(platformUA) && !/CriOS|FxiOS|EdgiOS|Chrome/i.test(platformUA);
     const isAndroid = /Android/i.test(platformUA);
+    const isDuckDuckGo = /DuckDuckGo/i.test(platformUA);
+    const isSamsungBrowser = /SamsungBrowser/i.test(platformUA);
+    const isAndroidChrome = isAndroid && /Chrome\//i.test(platformUA) &&
+      !/EdgA|OPR|Opera|SamsungBrowser|Firefox|DuckDuckGo|; wv\)/i.test(platformUA);
+    const isBestAndroidInstallBrowser = isAndroidChrome || isSamsungBrowser;
     // Already running as an installed home-screen app?
     const isStandalone = navigator.standalone === true ||
                          window.matchMedia('(display-mode: standalone)').matches;
@@ -2806,8 +2822,10 @@
         msg.innerHTML = 'Install this app: tap <b>Share</b> in Safari, then <b>"Add&nbsp;to&nbsp;Home&nbsp;Screen"</b>. It will work fully offline.';
       } else if (isIOS) {
         msg.innerHTML = 'Install this app: tap your browser’s <b>Share</b> button, then <b>"Add&nbsp;to&nbsp;Home&nbsp;Screen"</b>.';
+      } else if (isDuckDuckGo) {
+        msg.innerHTML = 'DuckDuckGo can only save a browser shortcut. For the full app install, open this link in <b>Chrome</b> or <b>Samsung Internet</b>.';
       } else if (isAndroid) {
-        msg.innerHTML = 'Install this app: tap the <b>⋮ menu</b>, then <b>Install app</b>. It will work fully offline.';
+        msg.innerHTML = 'Best Android install: open in <b>Chrome</b> or <b>Samsung Internet</b>, then tap <b>⋮</b> → <b>Install app</b>.';
       } else {
         msg.innerHTML = 'On your phone, visit <b>dosetracker.github.io</b> — or install it here from the address bar in Chrome or Edge.';
       }
@@ -2840,7 +2858,7 @@
       const hintBtn = $('#install-hint-btn');
       const hintMsg = $('#install-hint-msg');
       if (hintBtn && !hint.hidden) {
-        hintMsg.innerHTML = 'Install this app — free, works fully offline.';
+        hintMsg.innerHTML = 'Install DoseTracker with this browser — free, offline, no account.';
         hintBtn.hidden = false;
       }
     });
@@ -2852,6 +2870,7 @@
       const installSection = $('#welcome-install');
       const installTitle = $('#welcome-install-title');
       const installNote = $('#welcome-install-note');
+      const installHint = $('#welcome-install-hint');
       const stepsList = $('#welcome-steps');
       const installBtn = $('#welcome-install-btn');
       const againBtn = $('#welcome-again');
@@ -2866,7 +2885,7 @@
         stepsList.classList.add('plain');
         stepsList.innerHTML =
           `<li><b>iPhone:</b> open the link, tap <b>Share</b> ${SHARE_GLYPH} → <b>Add to Home Screen</b></li>` +
-          '<li><b>Android:</b> tap the <b>⋮ menu</b> → <b>Install app</b></li>';
+          '<li><b>Android:</b> use <b>Chrome</b> or <b>Samsung Internet</b>, then tap <b>⋮</b> → <b>Install app</b></li>';
       } else {
         let steps;
         if (isIOSSafari) {
@@ -2876,9 +2895,29 @@
         } else if (isIOS) {
           steps = [`Tap your browser’s <b>Share</b> button ${SHARE_GLYPH} (in Chrome it’s next to the address bar)`,
                    'Tap <b>Add to Home Screen</b>, then <b>Add</b>'];
+        } else if (isDuckDuckGo) {
+          installNote.hidden = false;
+          installNote.textContent = 'DuckDuckGo saves a browser shortcut, not the full app install.';
+          installHint.hidden = false;
+          installHint.innerHTML = '<b>Why switch?</b> DuckDuckGo can open DoseTracker, but Android only gives it a browser shortcut. Chrome and Samsung Internet can install it as a standalone offline app.';
+          steps = ['Copy or reopen this link in <b>Chrome</b> (or <b>Samsung Internet</b> on Samsung phones)',
+                   'Tap the <b>⋮ menu</b> → <b>Install app</b>'];
         } else if (isAndroid) {
-          steps = ['Tap the <b>⋮ menu</b> in the corner of your browser',
-                   'Choose <b>Install app</b> or <b>Add to Home screen</b>'];
+          if (isBestAndroidInstallBrowser) {
+            installNote.hidden = false;
+            installNote.textContent = 'Android installs it through your browser.';
+            installHint.hidden = false;
+            installHint.innerHTML = '<b>If Android says “Unsafe app” or “older Android version”:</b> that’s a generic Play Protect message shown for every web app — DoseTracker has no account, server, or analytics, and nothing ever leaves your phone. Tap <b>More details → Install anyway</b>. Still blocked? Update <b>Google Play services</b> in the Play Store, or just choose <b>Add to Home screen</b> instead — that always works.';
+            steps = ['Tap <b>Install the app</b> if it appears, or tap the <b>⋮ menu</b>',
+                     'Choose <b>Install app</b>'];
+          } else {
+            installNote.hidden = false;
+            installNote.textContent = 'Some Android browsers only create shortcuts.';
+            installHint.hidden = false;
+            installHint.innerHTML = '<b>Best result:</b> Chrome and Samsung Internet install DoseTracker as a standalone offline app. If Android shows an “Unsafe app” warning, that’s a generic Play Protect message for all web apps — tap <b>More details → Install anyway</b>, or use <b>Add to Home screen</b>.';
+            steps = ['For the cleanest install, open this link in <b>Chrome</b> (or <b>Samsung Internet</b> on Samsung phones)',
+                     'Tap the <b>⋮ menu</b> → <b>Install app</b>'];
+          }
         } else {
           steps = ['On your phone: visit <b>dosetracker.github.io</b> and add it to your home screen',
                    'On a computer: in Chrome or Edge, click the install icon at the right end of the address bar'];

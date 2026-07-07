@@ -42,7 +42,7 @@ Your data is nobody's business but yours:
 DoseTracker is a PWA (progressive web app) — visit once, keep it forever:
 
 - **iPhone / iPad:** open [dosetracker.github.io](https://dosetracker.github.io) in Safari → Share → **Add to Home Screen**
-- **Android:** open it in Chrome → menu → **Install app**
+- **Android:** open it in Chrome, or Samsung Internet on Samsung phones → menu → **Install app**. DuckDuckGo can only save a browser shortcut.
 - **Desktop:** click the install icon in the address bar (Chrome/Edge)
 
 Once installed it launches fullscreen from your home screen and works with no internet connection.
