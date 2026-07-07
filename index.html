@@ -568,12 +568,12 @@
 
     /* The share button gets the accent treatment — it's the friendly action.
        "Start fresh" in the welcome-back prompt shares the same look. */
-    #share-log, #share-send, #fresh-clear {
+    #share-log, #share-send, #fresh-clear, #wiki-open {
       color: var(--accent-strong);
       border-color: var(--accent-border);
       background: var(--accent-soft);
     }
-    #share-log:hover, #share-send:hover, #fresh-clear:hover { background: rgba(86,193,171,0.22); }
+    #share-log:hover, #share-send:hover, #fresh-clear:hover, #wiki-open:hover { background: rgba(86,193,171,0.22); }
 
     .log-header h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
     .controls { display: flex; gap: 8px; }
@@ -705,16 +705,6 @@
     .btn-ghost:hover { background: rgba(255,255,255,0.07); }
     /* A real link dressed as a button (the "Open PsychonautWiki" action) */
     a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-    /* Filled teal main action for modals — same recipe as the Add buttons */
-    .btn-accent {
-      background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
-      border-color: transparent;
-      color: var(--on-accent);
-      font-weight: 700;
-      box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 22%, transparent);
-    }
-    .btn-accent:hover { background: var(--accent-strong); }
-
     /* Substance-info pop-up: a compact, centred card — unlike the left-bound
        question dialogs, this one presents a single subject, so it's centred
        like the welcome screen. The dot carries the substance's own colour. */
@@ -1039,7 +1029,7 @@
       <h4 id="wiki-title"><span class="wiki-dot" id="wiki-dot" aria-hidden="true"></span><span id="wiki-name">Substance info</span></h4>
       <p>Read about this substance on <strong>PsychonautWiki</strong>, an independent encyclopedia.</p>
       <div class="actions">
-        <a class="btn btn-accent" id="wiki-open" href="#" target="_blank" rel="noopener noreferrer">Open PsychonautWiki ↗</a>
+        <a class="btn" id="wiki-open" href="#" target="_blank" rel="noopener noreferrer">Open PsychonautWiki ↗</a>
         <button class="btn btn-ghost" id="wiki-cancel">Cancel</button>
       </div>
     </div>
