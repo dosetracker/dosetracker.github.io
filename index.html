@@ -26,8 +26,7 @@
 
   <style>
     /* =====================================================================
-       THEME — every colour and size lives here. Change these variables to
-       retheme the whole app from one place.
+       THEME — core colours, shape and spacing.
        ===================================================================== */
     :root {
       /* Surfaces (darkest → lightest) */
@@ -93,8 +92,7 @@
       font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
                    "Apple Color Emoji", "Segoe UI Emoji";
       color: var(--text);
-      /* Two very faint glows keep the dark background from feeling flat.
-         The first one follows the chosen accent color. */
+      /* Subtle glows keep the dark background from feeling flat. */
       background:
         radial-gradient(900px 520px at 15% -10%, color-mix(in srgb, var(--accent) 8%, transparent) 0, transparent 60%),
         radial-gradient(700px 420px at 90% -5%, rgba(120,140,200,0.05) 0, transparent 60%),
@@ -114,8 +112,7 @@
     /* ===== Header ===== */
     header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
 
-    /* The icon tile: same gradient as the real app icon, lifted off the page
-       with a border, a drop shadow and a faint teal glow. */
+    /* Icon tile matching the home-screen icon. */
     .app-emblem {
       flex-shrink: 0;
       width: 54px; height: 54px;
@@ -159,8 +156,7 @@
     }
     .toolbar-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
-    /* Shared button language: same radius, border, type and press feedback
-       for every button in the app. */
+    /* Shared button styling. */
     .toolbar button, .btn, .btn-sm, .add-btn, .controls button {
       font-family: inherit;
       font-weight: 600;
@@ -182,9 +178,7 @@
       transform: scale(0.97);
     }
 
-    /* Primary action: the one solid, filled button on screen.
-       A slight top-to-bottom shine + soft glow make it feel like the
-       "main" button without shouting. */
+    /* Primary action. */
     #add-med {
       background: linear-gradient(180deg, var(--accent-strong) 0%, var(--accent) 55%);
       border-color: transparent;
@@ -265,19 +259,14 @@
 
     .card-top-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 
-    /* Drug title — the most prominent text on the card.
-       (Deliberately NOT called "name" anywhere: iOS sees fields labelled
-       "name" as contact forms and offers to AutoFill your personal details.)
-       Read-only until the pencil button next to it is tapped, so tapping the
-       name expands/collapses the card instead of opening the keyboard. */
+    /* Drug title. Avoid "name" so iOS does not offer contact autofill. */
     input.drug-title {
       font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
       padding: 4px 6px; margin: 0 0 0 -6px; flex: 0 1 auto; min-width: 0;
       background: transparent; border: none; color: var(--text);
       font-family: inherit; border-radius: 8px;
     }
-    /* Invisible copy of the title text; JS measures it to shrink the input
-       to its content, so the pencil sits right next to the name */
+    /* Hidden text mirror used to size the title input. */
     .title-sizer {
       position: absolute; left: -9999px; top: 0; visibility: hidden;
       white-space: pre;
@@ -290,16 +279,14 @@
       background: var(--surface-3);
       box-shadow: 0 0 0 3px var(--accent-ring);
     }
-    /* Small pencil next to the title — the only way to start renaming.
-       (Doubled class beats the base .icon-btn sizes defined further down.) */
+    /* Pencil next to the title; doubled class beats base .icon-btn sizes. */
     .icon-btn.title-edit-btn {
       width: 32px; height: 32px; min-width: 32px; min-height: 32px;
       margin: -4px 0 -4px -2px; padding: 0;
       color: var(--faint);
     }
     .icon-btn.title-edit-btn:hover { color: var(--text); }
-    /* ⓘ beside the pencil, only on cards whose name is a known preset.
-       Opens the substance-info dialog (never the browser directly). */
+    /* Preset info button. Opens a dialog before any external page. */
     .icon-btn.info-btn {
       width: 32px; height: 32px; min-width: 32px; min-height: 32px;
       margin: -4px 0 -4px -2px; padding: 0;
@@ -308,9 +295,7 @@
     .icon-btn.info-btn:hover { color: var(--text); }
     input.drug-title.invalid { color: var(--danger); }
 
-    /* Quick-pick chips: a thin, horizontally scrollable row of common
-       substances that appears under the title while it is being renamed.
-       Each chip carries the substance's signature colour as a small dot. */
+    /* Scrollable preset chips shown while renaming. */
     .preset-row {
       display: none;
       gap: 7px;
@@ -357,8 +342,7 @@
     .repeat-btn svg { flex-shrink: 0; }
     .repeat-btn:hover { background: rgba(86,193,171,0.22); }
 
-    /* Chevron in the top-right corner (margin-left:auto pushes it there,
-       since the title no longer stretches across the row) */
+    /* Chevron in the top-right corner. */
     .chev-btn {
       width: 36px; height: 36px; flex-shrink: 0;
       margin: -4px -10px -4px auto;
@@ -372,10 +356,7 @@
     .chev-btn svg { transition: transform var(--t-med) var(--ease); }
     .card:not(.collapsed) .chev-btn svg { transform: rotate(180deg); }
 
-    /* Footer line inside the card body: Remove on the LEFT (kept away from
-       the Add button above it on the right, so a missed tap at Add can't
-       delete the substance) and the quiet "Taken earlier?" link on the right.
-       The extra top margin adds distance below the dose row. */
+    /* Card footer keeps Remove away from the Add button. */
     .card-foot {
       display: flex; justify-content: space-between; align-items: center;
       gap: 12px; min-height: 28px; margin-top: 6px;
@@ -399,9 +380,7 @@
     }
     .earlier-cancel:hover { color: var(--text); background: rgba(255,255,255,0.06); }
 
-    /* Key numbers, designed to be readable at a glance: time since the last
-       dose is the big number on the card — for pacing, "when" matters more
-       than "how much". The running total sits beside it, slightly quieter. */
+    /* Key numbers: last dose is primary; running total is quieter. */
     .meta {
       display: flex; align-items: flex-end; justify-content: space-between;
       gap: 12px; flex-wrap: wrap;
@@ -409,8 +388,7 @@
     }
     .meta-block { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
     .meta-block:last-child { text-align: right; }
-    /* Right half of the meta row: the repeat button sits next to TOTAL.
-       .meta ignores taps (so they expand the card) — the button opts back in. */
+    /* Repeat button opts back into pointer events inside the tappable header. */
     .meta-right { display: flex; align-items: flex-end; gap: 12px; min-width: 0; }
     .meta .repeat-btn { pointer-events: auto; }
     .meta-label {
@@ -428,9 +406,7 @@
       font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
     }
 
-    /* ===== Smooth collapse/expand =====
-       The body sits inside a grid row that animates between 0 and full height.
-       No JavaScript measuring needed. */
+    /* ===== Smooth collapse/expand ===== */
     .card-collapse {
       display: grid;
       grid-template-rows: 1fr;
@@ -497,13 +473,7 @@
     button.add-btn:hover { background: var(--accent-strong); }
 
     /* ===== Colour picker =====
-       A small dot in front of the drug title (mirrors the dot in the log).
-       The button's hit area is much larger than the visible dot so it's easy
-       to tap; negative margins keep the visual spacing tight. The title input
-       overlaps the button's right edge and wins taps there (it's raised with
-       z-index below), so tapping the start of the name still edits the name,
-       not the colour. The wrapper must NOT be position:relative — that would
-       paint the button above the title and steal those taps. */
+       Small visible dot with a larger tap target. */
     .color-picker { display: flex; align-items: center; flex-shrink: 0; }
     .color-dot-btn {
       width: 38px; height: 38px;
@@ -524,10 +494,7 @@
     .color-dot-btn:focus-visible { outline: none; }
     .color-dot-btn:focus-visible .swatch { box-shadow: 0 0 0 3px var(--accent-ring); }
     .color-menu {
-      /* Floating dropdown. Its position is set in JS using position:fixed
-         (relative to the screen) so it overlays *beyond* the card instead
-         of being clipped by the card's overflow:hidden — which is needed
-         for the rounded corners and the open/close animation. */
+      /* Fixed-position menu avoids clipping inside rounded cards. */
       position: fixed;
       max-height: 60vh; overflow-y: auto;
       background: var(--surface-3);
@@ -558,8 +525,7 @@
       box-shadow: var(--shadow-soft);
       overflow: hidden;
     }
-    /* Title (with the quiet "clear" beside it) on its own line, the two
-       main buttons in a row below it */
+    /* Title on one line, main actions below. */
     .log-header {
       display: flex; flex-direction: column; align-items: flex-start;
       gap: 10px;
@@ -567,8 +533,7 @@
       border-bottom: 1px solid var(--border);
     }
     .log-title-row { display: flex; align-items: center; gap: 4px; }
-    /* "clear" is deliberately small and colourless next to the title — it's
-       the rarely-needed action, demoted from the main button row */
+    /* Clear is intentionally quiet beside the title. */
     .clear-log-btn {
       border: none; background: none; cursor: pointer;
       color: var(--faint); font-family: inherit;
@@ -579,8 +544,7 @@
     }
     .clear-log-btn:hover { color: var(--danger); background: var(--danger-soft); }
 
-    /* The share button gets the accent treatment — it's the friendly action.
-       "Start fresh" in the welcome-back prompt shares the same look. */
+    /* Friendly accent actions. */
     #share-log, #share-send, #fresh-clear, #wiki-open, #combo-show {
       color: var(--accent-strong);
       border-color: var(--accent-border);
@@ -638,14 +602,11 @@
 
     .edit-input { width: 100%; min-width: 0; }
 
-    /* Layout for the amount + unit fields while editing a log row.
-       The unit column takes its natural width so "mg" etc. never get
-       clipped; only genuinely long content would make it shrink. */
+    /* Edit amount + unit layout; unit keeps its natural width. */
     .edit-amount-grid { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 8px; }
     .edit-amount-grid select { width: auto; }
 
-    /* If iOS AutoFill touches a field it paints it with its own (light)
-       background, which made light text invisible. Force our colours. */
+    /* Keep iOS autofill readable in the dark theme. */
     input:-webkit-autofill,
     input:-webkit-autofill:hover,
     input:-webkit-autofill:focus {
@@ -664,10 +625,7 @@
       box-shadow: var(--shadow);
       display: none; gap: 12px; align-items: center; z-index: 1000;
       font-size: 14px; font-weight: 500;
-      /* A fixed element anchored at left:50% only gets half the screen's
-         width to lay itself out in, which made even short messages wrap.
-         max-content sizes the toast to its text instead; max-width still
-         caps very long messages. */
+      /* Size to text, capped for long messages. */
       width: max-content;
       max-width: min(92vw, 420px);
     }
@@ -718,9 +676,7 @@
     .btn-ghost:hover { background: rgba(255,255,255,0.07); }
     /* A real link dressed as a button (the "Open PsychonautWiki" action) */
     a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-    /* Substance-info pop-up: a compact, centred card — unlike the left-bound
-       question dialogs, this one presents a single subject, so it's centred
-       like the welcome screen. The dot carries the substance's own colour. */
+    /* Compact centred substance-info dialog. */
     .wiki-modal { max-width: 340px; text-align: center; }
     .wiki-modal h4 {
       display: flex; align-items: center; justify-content: center; gap: 9px;
@@ -735,9 +691,7 @@
     .wiki-modal .actions .btn { width: 100%; }
 
     /* ===== Combination checker =====
-       Picker step: one chip per TripSit chart group, pre-selected from
-       tonight's log. Results step: TripSit's verbatim verdicts, worst
-       first, each row edged in the verdict's chart colour (--st). */
+       Picker chips map to TripSit groups; results show TripSit's text. */
     .combo-modal { width: min(92vw, 440px); }
     .combo-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
     .combo-head h4 { margin: 0; }
@@ -781,8 +735,7 @@
       border: 1px solid var(--border-strong); border-radius: 12px;
     }
 
-    /* QR code in the Information dialog. The white padding is the "quiet
-       zone" scanners need around a code — don't shrink it. */
+    /* QR code with scanner quiet zone. */
     .qr-card {
       width: fit-content;
       margin: 12px auto 6px;
@@ -798,8 +751,7 @@
       color: var(--text); margin: 0 0 6px;
     }
     .privacy-content .contact-line { text-align: center; font-size: 13.5px; margin: 14px 0 0; }
-    /* Compact disclosure line at the very end — must not push the dialog
-       past one screen */
+    /* Compact disclosure line. */
     .privacy-content .fine-print { font-size: 12.5px; color: var(--faint); text-align: center; margin: 12px 0 0; }
     /* The quiet version stamp at the very bottom of the dialog */
     .privacy-content .version-line {
@@ -811,9 +763,7 @@
     .contact-line a { color: var(--accent-strong); text-underline-offset: 3px; }
     #welcome-again { display: block; margin: 12px auto 0; }
 
-    /* ===== Welcome screen (first visit) =====
-       Sized to fit a phone screen WITHOUT scrolling: compact spacing, short
-       copy. The install steps are the hero — always unfolded, big text. */
+    /* ===== Welcome screen (first visit) ===== */
     #welcome { z-index: 1150; }
     .welcome { width: min(92vw, 460px); text-align: center; padding: 20px 20px 16px; }
     .welcome-emblem {
@@ -840,8 +790,7 @@
     }
     .welcome-install-note { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; }
     .welcome-install-note[hidden] { display: none; }
-    /* Reassurance note under the steps: explains Android's generic Play Protect
-       warning so it doesn't read as "this app is unsafe". Quiet, boxed. */
+    /* Quiet Android install warning note. */
     .welcome-install-hint {
       margin: 12px 0 0; padding: 10px 12px; text-align: left;
       background: var(--accent-soft); border: 1px solid var(--accent-border);
@@ -892,8 +841,7 @@
     @media (prefers-reduced-motion: reduce) { .welcome-share-arrow { animation: none; } }
 
     /* ===== In-app number pad ===== */
-    /* Replaces the phone's keypad (which draws letters under the digits —
-       a system thing websites can't turn off) with a clean digits-only pad. */
+    /* Clean digits-only pad used instead of the phone keypad. */
     #numpad {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000;
       display: none;
@@ -925,12 +873,7 @@
       border-color: var(--accent-border);
       background: var(--accent-soft);
     }
-    /* Extra room at the bottom so the field being typed into can scroll up
-       above the pad. The room must go on .container, NOT body: body's height
-       is locked to the screen (html,body{height:100%} + border-box), so
-       padding there never actually added scroll space — on a short page the
-       field stayed buried under the pad. Padding the container genuinely
-       makes the page taller, so the scroll always has somewhere to go. */
+    /* Extra scroll room so focused fields can sit above the pad. */
     body.numpad-open .container { padding-bottom: 440px; }
 
     /* ===== iOS install hint banner ===== */
@@ -1002,8 +945,7 @@
 <body>
   <div class="container">
     <header>
-      <!-- Small "app icon" tile: the same capsule as the home-screen icon,
-           drawn right here in the page so it loads instantly and offline. -->
+      <!-- Inline app icon, matching the home-screen icon. -->
       <div class="app-emblem" aria-hidden="true">
         <svg viewBox="0 0 512 512" focusable="false">
           <g transform="translate(256 256) scale(1.26) rotate(28) translate(-256 -256)">
@@ -1055,8 +997,7 @@
       </table>
     </section>
 
-    <!-- Quiet footer: rarely-used / destructive actions live down here,
-         away from the everyday buttons -->
+    <!-- Quiet footer for rarely-used actions. -->
     <footer class="page-footer">
       <button id="privacy-open" class="footer-link" aria-haspopup="dialog" aria-controls="privacy">Information</button>
       <span class="footer-sep" aria-hidden="true">·</span>
@@ -1064,9 +1005,7 @@
     </footer>
   </div>
 
-  <!-- Install hint banner: shown whenever the app runs in a browser tab
-       (never inside the installed app). Message adapts to the platform;
-       dismissing hides it for this visit only. -->
+  <!-- Install hint banner for browser-tab use. -->
   <div id="install-hint" class="install-hint" hidden role="note">
     <svg class="share-icon" width="18" height="22" viewBox="0 0 18 22" fill="none" aria-hidden="true">
       <path d="M9 1v13M5 5l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1095,9 +1034,7 @@
     </div>
   </div>
 
-  <!-- Substance info: opened by the ⓘ on preset cards. Names PsychonautWiki
-       BEFORE anything external opens, so nobody mistakes the article for our
-       own content. The open action is a real link (new tab, no referrer). -->
+  <!-- Substance info dialog shown before opening PsychonautWiki. -->
   <div id="wiki" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="wiki-title" style="display:none;">
     <div class="modal wiki-modal" role="document">
       <h4 id="wiki-title"><span class="wiki-dot" id="wiki-dot" aria-hidden="true"></span><span id="wiki-name">Substance info</span></h4>
@@ -1109,11 +1046,7 @@
     </div>
   </div>
 
-  <!-- Combination checker: opens ONLY when the user asks (the button in the
-       log section). Pre-filled from tonight's log but confirmed by the user;
-       anything TripSit's chart doesn't cover is named as excluded, so
-       silence can never read as safety. Ratings come word-for-word from the
-       bundled TripSit snapshot — the app itself rates nothing. -->
+  <!-- User-initiated TripSit combination checker. -->
   <div id="combo" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="combo-title" style="display:none;">
     <div class="modal combo-modal" role="document">
       <div class="combo-head">
@@ -1323,21 +1256,9 @@
     const palette = ['#ef4444','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
     const paletteNames = ['Red','Orange','Yellow','Lime','Green','Teal','Cyan','Blue','Violet','Pink'];
 
-    // Pre-set substances for the quick-pick chips shown while naming a card,
-    // ordered by how common they are on a dance floor. Each brings a fitting
-    // signature colour and the unit it is usually measured in. Since the
-    // 2026-07-08 repaint the stimulants share one white→orange "heat ramp"
-    // (snow → champagne → gold → bronze → orange) and the psychedelics wear
-    // multi-colour blends (see `blend`), so most signature colours now live
-    // off the 10-colour picker palette — the colour menu just shows no
-    // swatch as selected. Typing one of these names by hand (any
-    // capitalisation) adopts the same colour and unit.
-    // `ts` is each preset's column on TripSit's combination chart.
-    // 3-MMC has none: TripSit deliberately hasn't charted it, and mapping it
-    // to mephedrone ourselves would be our judgment, not theirs.
-    // `blend` is a gradient painted over dots and strips at draw time. The
-    // flat `color` underneath is what gets STORED — saved data, the colour
-    // picker and hexToRgba tinting all keep working on a plain hex.
+    // Presets power quick-pick chips, default units/colours, and TripSit mapping.
+    // `blend` is only visual; the stored colour remains a plain hex.
+    // 3-MMC intentionally has no TripSit mapping because TripSit has not charted it.
     const PRESETS = [
       { name: 'MDMA',       color: '#f97316', unit: 'mg',   ts: 'mdma' },
       { name: 'Ketamine',   color: '#3b82f6', unit: 'line', ts: 'ketamine' },
@@ -1356,10 +1277,7 @@
       { name: 'Alcohol',    color: '#ef4444', unit: 'unit', ts: 'alcohol' }
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
-    // Signature colours from before the 2026-07-08 repaint, keyed by
-    // nameKey(name). loadState() uses this to move existing cards onto the
-    // new palette — but only cards still wearing the old default; anything
-    // the user picked by hand stays untouched.
+    // Old preset defaults used to migrate untouched cards after the repaint.
     const OLD_PRESET_COLORS = {
       'mdma': '#ec4899', 'speed': '#eab308', 'mephedrone': '#10b981',
       '3-mmc': '#06b6d4', 'cocaine': '#e2e8f0', '2c-b': '#8b5cf6',
@@ -1371,15 +1289,12 @@
       const p = findPreset(name);
       return (p && p.blend && color === p.color) ? p.blend : null;
     };
-    // Round dots get the full swirl (conic) or a diagonal melt; the slim
-    // strip along a card's top edge lays the same colours out left-to-right.
+    // Dots use the full blend; card strips lay it out left-to-right.
     const blendDotCss = (b) => b.type === 'conic'
       ? `conic-gradient(from 210deg, ${b.colors.join(', ')}, ${b.colors[0]})`
       : `linear-gradient(135deg, ${b.colors.join(', ')})`;
     const blendStripCss = (b) => `linear-gradient(90deg, ${b.colors.join(', ')})`;
-    // The same blends inside the shared PNG, built as tiny per-dot canvas
-    // gradients. Conic needs a newer engine (Safari 16.2+); anything older
-    // quietly gets the flat base colour instead.
+    // Canvas version of preset blends; older engines fall back to flat colour.
     function blendCanvasFill(ctx, x, y, r, name, color) {
       const b = blendFor(name, color);
       if (!b) return color;
@@ -1394,28 +1309,20 @@
       b.colors.forEach((c, i) => g.addColorStop(i / (b.colors.length - 1), c));
       return g;
     }
-    // `wiki` is the PsychonautWiki article title where it differs from our
-    // chip name (Speed → Amphetamine etc.); absent means same as `name`.
+    // `wiki` overrides the PsychonautWiki article title when needed.
     const presetWikiName = (p) => p.wiki || p.name;
     const presetWikiUrl = (p) =>
       'https://psychonautwiki.org/wiki/' + encodeURIComponent(presetWikiName(p).replace(/ /g, '_'));
 
     // ===== TripSit combination data (offline snapshot) =====
-    // A small, attributed extract of TripSit's combination chart
-    // (combo.tripsit.me): verbatim pair ratings among the groups below, plus
-    // TripSit's own name/alias table so free-typed entries like "xanax" can
-    // be recognised. Regenerated by scripts/update-tripsit.py — do not edit
-    // by hand, and refresh it every few months so it can't drift stale.
+    // Offline TripSit extract: pair ratings plus TripSit's alias table.
+    // Regenerate with scripts/update-tripsit.py; do not edit by hand.
     // TRIPSIT-DATA-START (auto-generated)
     const TRIPSIT = {"snapshot":"2026-07-08","pairs":{"ketamine|mdma":{"s":"Low Risk & Synergy","n":"No unexpected interactions, though likely to increase blood pressure but not an issue with sensible doses. Moving around on high doses of  this combination may be ill advised due to risk of physical injury."},"amphetamines|mdma":{"s":"Caution","n":"This combination of stimulants will increase strain on the heart, may cause some physical discomfort, and has the chance to cause cardiovascular issues. The anxiogenic and focusing effects of stimulants can increase the chance of unpleasant thought loops and make the experience more uncomfortable, this combination raises these chances. Amphetamines will increase the neurotoxic effects of MDMA, in addition to causing further concerns of hyperthermia due to the inherent nature of the combination. It will also raise one's body temperature, also likely making the combination more neurotoxic."},"mdma|mephedrone":{"s":"Dangerous","n":"Risk of serotonin syndrome as both drugs raise serotonin levels. Stimulants also increase the neurotoxic effects of MDMA, in addition to concerns of high blood pressure and unnecessary strain on the heart. As well as potentially causing anxiety and greater physical discomfort due to the combination."},"cocaine|mdma":{"s":"Caution","n":"Cocaine blocks some of the desirable effects of MDMA while increasing the risk of heart attack."},"ghb/gbl|mdma":{"s":"Caution","n":"Large amounts of GHB/GBL may overwhelm the effects of MDMA on the comedown."},"2c-x|mdma":{"s":"Low Risk & Synergy"},"lsd|mdma":{"s":"Low Risk & Synergy"},"mdma|mushrooms":{"s":"Low Risk & Synergy"},"cannabis|mdma":{"s":"Low Risk & Synergy","n":"Large amounts of cannabis may cause strong and somewhat unpredictable experiences in combination with MDMA. Cannabis should be saved for towards the end of the experience if possible."},"alcohol|mdma":{"s":"Caution","n":"The combination of MDMA and alcohol may increase strain on the cardiovascular system and lead to increased alcohol consumption. MDMA may also impair one's ability to recognize their level of drunkenness, leading to increased alcohol consumption and poor decision-making. Alcohol may also increase the risk of dehydration and hyperthermia (increased body temperature) when combined with MDMA."},"benzodiazepines|mdma":{"s":"Low Risk & Decrease"},"mdma|opioids":{"s":"Low Risk & No Synergy"},"mdma|tramadol":{"s":"Dangerous","n":"Tramadol and stimulants both increase the risk of seizures."},"caffeine|mdma":{"s":"Caution","n":"Caffeine is not really necessary with MDMA and increases any neurotoxic effects from MDMA"},"mdma|nitrous":{"s":"Low Risk & Synergy"},"amphetamines|ketamine":{"s":"Caution","n":"No unexpected interactions, though likely to increase blood pressure but not an issue with sensible doses. Moving around on high doses of this combination may be ill advised due to risk of physical injury."},"cocaine|ketamine":{"s":"Caution","n":"No unexpected interactions, though likely to increase blood pressure but not an issue with sensible doses. Moving around on high doses of this combination may be ill advised due to risk of physical injury."},"ghb/gbl|ketamine":{"s":"Dangerous","n":"Both substances cause ataxia and bring a risk of vomiting and unconsciousness. If the user falls unconscious while under the influence there is a severe risk of vomit aspiration if they are not placed in the recovery position."},"2c-x|ketamine":{"s":"Low Risk & Synergy"},"ketamine|lsd":{"s":"Low Risk & Synergy"},"ketamine|mushrooms":{"s":"Low Risk & Synergy"},"cannabis|ketamine":{"s":"Low Risk & Synergy"},"alcohol|ketamine":{"s":"Dangerous","n":"Both substances cause ataxia and bring a very high risk of vomiting and unconsciousness. If the user falls unconscious while under the influence there is a severe risk of vomit aspiration if they are not placed in the recovery position."},"benzodiazepines|ketamine":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position."},"ketamine|opioids":{"s":"Dangerous","n":"Both substances bring a risk of vomiting and unconsciousness. If the user falls unconscious while under the influence there is a severe risk of vomit aspiration if they are not placed in the recovery position."},"ketamine|tramadol":{"s":"Dangerous"},"caffeine|ketamine":{"s":"Low Risk & No Synergy","n":"No unexpected interactions."},"ketamine|nitrous":{"s":"Low Risk & Synergy"},"amphetamines|cocaine":{"s":"Caution","n":"This combination of stimulants will increase strain on the heart. It is not generally worth it as cocaine has a mild blocking effect on dopamine releasers like amphetamine"},"amphetamines|ghb/gbl":{"s":"Caution","n":"Stimulants increase respiration rate allowing for a higher dose of sedatives. If the stimulant wears off first then the opiate may overcome the individual and cause respiratory arrest."},"2c-x|amphetamines":{"s":"Caution","n":"The anxiogenic and focusing effects of stimulants increase the chance of unpleasant thought loops. The combination is generally unnecessary because of the stimulating effects of psychedelics. Combination of the stimulating effects may be uncomfortable."},"amphetamines|lsd":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"amphetamines|mushrooms":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"amphetamines|cannabis":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"alcohol|amphetamines":{"s":"Caution","n":"Drinking on stimulants is risky because the sedative effects of the alcohol are reduced, and these are what the body uses to gauge drunkenness. This typically leads to excessive drinking with greatly reduced inhibitions, high risk of liver damage and increased dehydration. They will also allow you to drink past a point where you might normally pass out, increasing the risk. If you do decide to do this then you should set a limit of how much you will drink each hour and stick to it, bearing in mind that you will feel the alcohol and the stimulant less. Extended release formulations may severely impede sleep, further worsening the hangover."},"amphetamines|benzodiazepines":{"s":"Low Risk & Decrease","n":"Both can dull each other's effects, so if one wears off before the other it's possible to overdose due to the lack of counteraction"},"amphetamines|opioids":{"s":"Caution","n":"Stimulants increase respiration rate, which can allow for a higher dose of opiates normal . If the stimulant wears off first then the opiate may overcome the individual and cause respiratory arrest."},"amphetamines|tramadol":{"s":"Dangerous","n":"Tramadol and stimulants both increase the risk of seizures."},"amphetamines|caffeine":{"s":"Caution","n":"This combination of stimulants is not generally necessary and may increase strain on the heart, as well as potentially causing anxiety and greater physical discomfort."},"amphetamines|nitrous":{"s":"Low Risk & Synergy"},"ghb/gbl|mephedrone":{"s":"Caution","n":"Both can dull each other's effects, so if one wears off before the other it's possible to overdose due to the lack of counteraction. Both substances affect the heart and may lead to further dangerous heart complications at higher dosages. Additionally, the combination may increase the negative side effects of each other."},"lsd|mephedrone":{"s":"Caution","n":"The anxiogenic and focusing effects of stimulants increase the chance of unpleasant thought loops, in addition to the possible negative side effects of coming down from said stimulant while on a psychedelic. In extreme cases, stimulants, especially in combination can result in severe vasoconstriction, tachycardia, hypertension, and heart failure."},"mephedrone|mushrooms":{"s":"Low Risk & Synergy","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"mephedrone|opioids":{"s":"Caution","n":"Stimulants increase respiration rate allowing a higher dose of opiates. If the stimulant wears off first then the opiate may overcome the patient and cause respiratory arrest."},"mephedrone|tramadol":{"s":"Dangerous","n":"There is a high risk of serotonin syndrome and seizures at recreational dosages. Both substances affect the heart and may lead to further dangerous heart complications at higher dosages. Both can dull each other's effects, so if one wears off before the other it's possible to overdose due to the lack of counteraction. The combination may increase each other's side effects, such as dizziness and drowsiness. At higher dosages, the combination may increase each other’s side effects, such as delirium, mania, and psychosis."},"caffeine|mephedrone":{"s":"Caution","n":"This combination of stimulants is not generally necessary and may increase strain on the heart, as well as potentially causing anxiety and great physical discomfort. However, individual responses to caffeine can vary significantly, often influenced by factors like habitual versus occasional usage."},"cocaine|ghb/gbl":{"s":"Caution","n":"Stimulants increase respiration rate allowing for a higher dose of sedatives than normal. If the stimulant wears off first the opiate may overcome the individual and cause respiratory arrest. Likewise the ghb/gbl can wear off and leave a dangerous concentration of cocaine behind"},"2c-x|cocaine":{"s":"Caution","n":"The anxiogenic and focusing effects of stimulants increase the chance of unpleasant thought loops. The combination is generally unnecessary because of the stimulating effects of psychedelics. Combination of the stimulating effects may be uncomfortable."},"cocaine|lsd":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"cocaine|mushrooms":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"cannabis|cocaine":{"s":"Caution","n":"Stimulants increase anxiety levels and the risk of thought loops which can lead to negative experiences"},"alcohol|cocaine":{"s":"Unsafe","n":"Cocaine can decrease some of the intoxicating effects of alcohol, causing some people to drink more than they otherwise would, which leads to greater behavioral and physical health risks. There is also some debate about cocaethylene, a metabolite produced when combining alcohol and cocaine, with some researchers positing that it is more cardiotoxic than cocaine on its own. Use moderation when combining these substances."},"benzodiazepines|cocaine":{"s":"Low Risk & Decrease"},"cocaine|opioids":{"s":"Dangerous","n":"Stimulants increase respiration rate allowing for a higher dose of opiates than normal. If the stimulant wears off first then the opiate may overcome the individual and cause respiratory arrest."},"cocaine|tramadol":{"s":"Dangerous","n":"Tramadol and stimulants both increase the risk of seizures."},"caffeine|cocaine":{"s":"Caution","n":"Both stimulants, risk of tachycardia, hypertension, and in extreme cases heart failure."},"cocaine|nitrous":{"s":"Low Risk & Synergy"},"2c-x|ghb/gbl":{"s":"Low Risk & Decrease"},"ghb/gbl|lsd":{"s":"Low Risk & Decrease"},"ghb/gbl|mushrooms":{"s":"Low Risk & Decrease"},"cannabis|ghb/gbl":{"s":"Low Risk & Synergy"},"alcohol|ghb/gbl":{"s":"Dangerous","n":"Even in very low doses this combination rapidly leads to memory loss, severe ataxia and unconsciousness. There is a high risk of vomit aspiration while unconscious."},"benzodiazepines|ghb/gbl":{"s":"Dangerous","n":"The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position."},"ghb/gbl|opioids":{"s":"Dangerous","n":"The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position"},"ghb/gbl|tramadol":{"s":"Dangerous","n":"The sedative effects of this combination can lead to dangerous respiratory depression."},"caffeine|ghb/gbl":{"s":"Low Risk & No Synergy"},"ghb/gbl|nitrous":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Memory blackouts are likely."},"2c-x|lsd":{"s":"Low Risk & Synergy"},"2c-x|mushrooms":{"s":"Low Risk & Synergy"},"2c-x|cannabis":{"s":"Caution","n":"Cannabis has an unexpectedly strong and somewhat unpredictable synergy with psychedelics."},"2c-x|alcohol":{"s":"Low Risk & Decrease"},"2c-x|benzodiazepines":{"s":"Low Risk & Decrease"},"2c-x|opioids":{"s":"Low Risk & No Synergy"},"2c-x|tramadol":{"s":"Unsafe","n":"Tramadol is well known to lower seizure threshold and psychedelics raise the risk of seizures."},"2c-x|caffeine":{"s":"Low Risk & No Synergy","n":"High doses of caffeine may cause anxiety which is less manageable when tripping, and since both are stimulating the combination may cause some physical discomfort."},"2c-x|nitrous":{"s":"Low Risk & Synergy"},"lsd|mushrooms":{"s":"Low Risk & Synergy"},"cannabis|lsd":{"s":"Caution","n":"Cannabis has an unexpectedly strong and somewhat unpredictable synergy with psychedelics."},"alcohol|lsd":{"s":"Low Risk & Decrease"},"benzodiazepines|lsd":{"s":"Low Risk & Decrease"},"lsd|opioids":{"s":"Low Risk & No Synergy"},"lsd|tramadol":{"s":"Unsafe","n":"Tramadol is well known to lower seizure threshold and psychedelics also cause occasional seizures."},"caffeine|lsd":{"s":"Low Risk & No Synergy"},"lsd|nitrous":{"s":"Low Risk & Synergy"},"cannabis|mushrooms":{"s":"Caution","n":"Cannabis has an unexpectedly strong and somewhat unpredictable synergy with psychedelics."},"alcohol|mushrooms":{"s":"Low Risk & Decrease"},"benzodiazepines|mushrooms":{"s":"Low Risk & Decrease"},"mushrooms|opioids":{"s":"Low Risk & No Synergy"},"mushrooms|tramadol":{"s":"Unsafe","n":"Tramadol is well known to lower seizure threshold and psychedelics also cause occasional seizures."},"caffeine|mushrooms":{"s":"Low Risk & No Synergy"},"mushrooms|nitrous":{"s":"Low Risk & Synergy"},"alcohol|cannabis":{"s":"Low Risk & Synergy","n":"In excess, this combination can cause nausea."},"benzodiazepines|cannabis":{"s":"Low Risk & Decrease"},"cannabis|opioids":{"s":"Low Risk & Synergy"},"cannabis|tramadol":{"s":"Low Risk & Synergy"},"caffeine|cannabis":{"s":"Low Risk & No Synergy"},"cannabis|nitrous":{"s":"Low Risk & Synergy"},"alcohol|benzodiazepines":{"s":"Dangerous","n":"Ethanol ingestion may potentiate the CNS effects of many benzodiazepines. The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Blacking out and memory loss is almost certain."},"alcohol|opioids":{"s":"Dangerous","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. Place the affected individual in the recovery position to prevent vomit aspiration from excess. Memory blackouts are likely"},"alcohol|tramadol":{"s":"Dangerous","n":"Heavy CNS depressants, risk of seizures. Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. Place the affected individual in the recovery position to prevent vomit aspiration from excess. Memory blackouts are likely."},"alcohol|caffeine":{"s":"Low Risk & No Synergy"},"alcohol|nitrous":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Memory blackouts are likely."},"benzodiazepines|opioids":{"s":"Dangerous","n":"Central nervous system and/or respiratory-depressant effects may be additively or synergistically present. The two substances potentiate each other strongly and unpredictably, very rapidly leading to unconsciousness. While unconscious, vomit aspiration is a risk if not placed in the recovery position Blackouts/memory loss likely"},"benzodiazepines|tramadol":{"s":"Dangerous","n":"Central nervous system- and/or respiratory-depressant effects may be additively or synergistically present. Vomit aspiration is a risk when passed out, lay down in recovery position if ingested."},"benzodiazepines|caffeine":{"s":"Low Risk & Decrease"},"benzodiazepines|nitrous":{"s":"Low Risk & Decrease"},"opioids|tramadol":{"s":"Dangerous","n":"Concomitant use of tramadol increases the seizure risk in individuals taking other opioids. These agents are often individually epileptogenic and may have additive effects on seizure threshold during coadministration. Central nervous system- and/or respiratory-depressant effects may be additively or synergistically present"},"caffeine|opioids":{"s":"Low Risk & No Synergy"},"nitrous|opioids":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Memory blackouts are likely."},"caffeine|tramadol":{"s":"Low Risk & No Synergy"},"nitrous|tramadol":{"s":"Caution","n":"Both substances potentiate the ataxia and sedation caused by the other and can lead to unexpected loss of consciousness at high doses. While unconscious, vomit aspiration is a risk if not placed in the recovery position. Memory blackouts are likely."},"caffeine|nitrous":{"s":"Low Risk & No Synergy"}},"names":{"2cb":"2c-x","bees":"2c-x","nexus":"2c-x","2cban":"2c-x","2cbfly":"2c-x","2cbflynbome":"2c-x","2cc":"2c-x","2cd":"2c-x","2cm":"2c-x","2ce":"2c-x","2cg":"2c-x","2cg5":"2c-x","2ci":"2c-x","2cip":"2c-x","2cn":"2c-x","2cp":"2c-x","2ct":"2c-x","2ct2":"2c-x","2ct4":"2c-x","2ct7":"2c-x","2ct21":"2c-x","3ohphenazepam":"benzodiazepines","3hophenazepam":"benzodiazepines","3hop":"benzodiazepines","3ohp":"benzodiazepines","3hydroxyphenazepam":"benzodiazepines","4meobutryfentanyl":"opioids","4meobutyrfentanyl":"opioids","4meobf":"opioids","6mddm":"opioids","6methylenedihydrodesoxymorphine":"opioids","acetylfentanyl":"opioids","af":"opioids","acrylfentanyl":"opioids","ah7921":"opioids","alcohol":"alcohol","etoh":"alcohol","beer":"alcohol","ethanol":"alcohol","booze":"alcohol","hooch":"alcohol","alprazolam":"benzodiazepines","xanax":"benzodiazepines","prazolam":"benzodiazepines","ksalol":"benzodiazepines","niravam":"benzodiazepines","amphetamine":"amphetamines","speed":"amphetamines","pepp":"amphetamines","amphetamines":"amphetamines","amphetamin":"amphetamines","amfetamine":"amphetamines","amph":"amphetamines","hearts":"amphetamines","pep":"amphetamines","bentazepam":"benzodiazepines","thiadipone":"benzodiazepines","tiadipona":"benzodiazepines","benzodioxolefentanyl":"opioids","bromadol":"opioids","bdpc":"opioids","bromazepam":"benzodiazepines","lectopam":"benzodiazepines","lexilium":"benzodiazepines","lexotan":"benzodiazepines","brazepam":"benzodiazepines","lexotanil":"benzodiazepines","bromazolam":"benzodiazepines","xli268":"benzodiazepines","brotizolam":"benzodiazepines","lendormin":"benzodiazepines","buprenorphine":"opioids","suboxone":"opioids","subs":"opioids","bupe":"opioids","butyrfentanyl":"opioids","bf":"opioids","caffeine":"caffeine","coffee":"caffeine","camazepam":"benzodiazepines","albego":"benzodiazepines","limpidon":"benzodiazepines","paxor":"benzodiazepines","cannabis":"cannabis","weed":"cannabis","thc":"cannabis","marijuana":"cannabis","dagga":"cannabis","hash":"cannabis","clobazam":"benzodiazepines","frisium":"benzodiazepines","clonazepam":"benzodiazepines","klonopin":"benzodiazepines","kpin":"benzodiazepines","clonazolam":"benzodiazepines","clam":"benzodiazepines","cloniprazepam":"benzodiazepines","clonitazene":"opioids","clorazepate":"benzodiazepines","tranxene":"benzodiazepines","novoclopate":"benzodiazepines","tranzene":"benzodiazepines","clotiazepam":"benzodiazepines","clozan":"benzodiazepines","distensan":"benzodiazepines","trecalmo":"benzodiazepines","rize":"benzodiazepines","rizen":"benzodiazepines","veratran":"benzodiazepines","cocaine":"cocaine","coke":"cocaine","codeine":"opioids","cyclopentylfentanyl":"opioids","cpf":"opioids","delorazepam":"benzodiazepines","nordiclazepam":"benzodiazepines","demerol":"opioids","pethidine":"opioids","meperidine":"opioids","deschloroetizolam":"benzodiazepines","etizolam2":"benzodiazepines","desmethylflunitrazepam":"benzodiazepines","fonazepam":"benzodiazepines","ro054435":"benzodiazepines","norflunitrazepam":"benzodiazepines","dextropropoxyphene":"opioids","darvocet":"opioids","coproxamol":"opioids","capadex":"opioids","digesic":"opioids","diazepam":"benzodiazepines","valium":"benzodiazepines","diclazepam":"benzodiazepines","dihydrocodeine":"opioids","dhc":"opioids","dipipanone":"opioids","diconal":"opioids","estazolam":"benzodiazepines","prosom":"benzodiazepines","eurodin":"benzodiazepines","elprazolam":"benzodiazepines","ethylmorphine":"opioids","etizolam":"benzodiazepines","etiz":"benzodiazepines","etizest":"benzodiazepines","etilaam":"benzodiazepines","sedekopan":"benzodiazepines","depas":"benzodiazepines","etizola":"benzodiazepines","inxity":"benzodiazepines","zoly":"benzodiazepines","lamet":"benzodiazepines","towa":"benzodiazepines","fentanyl":"opioids","fent":"opioids","flualprazolam":"benzodiazepines","flubromazepam":"benzodiazepines","flubromazolam":"benzodiazepines","flam":"benzodiazepines","fluclotizolam":"benzodiazepines","flunitrazepam":"benzodiazepines","roofies":"benzodiazepines","rohypnol":"benzodiazepines","flunitrazolam":"benzodiazepines","fln":"benzodiazepines","flurazepam":"benzodiazepines","dalmane":"benzodiazepines","flutazolam":"benzodiazepines","flutoprazepam":"benzodiazepines","restas":"benzodiazepines","furanylfentanyl":"opioids","fuf":"opioids","gbl":"ghb/gbl","ghb":"ghb/gbl","glaucine":"opioids","halazepam":"benzodiazepines","paxipam":"benzodiazepines","heroin":"opioids","diamorphine":"opioids","hydrocodone":"opioids","vicodin":"opioids","hydro":"opioids","hydromorphone":"opioids","dilaudid":"opioids","diluadid":"opioids","ibogaine":"opioids","iboga":"opioids","ic26":"opioids","methiodone":"opioids","isomethadone":"opioids","ketamine":"ketamine","k":"ketamine","ket":"ketamine","kitty":"ketamine","kittens":"ketamine","specialk":"ketamine","ketobemidone":"opioids","kbd":"opioids","kratom":"opioids","librium":"benzodiazepines","chlordiazepoxide":"benzodiazepines","lorazepam":"benzodiazepines","ativan":"benzodiazepines","lormetazepam":"benzodiazepines","noctamid":"benzodiazepines","lsd":"lsd","lsd25":"lsd","acid":"lsd","cid":"lsd","lucy":"lsd","mdma":"mdma","molly":"mdma","ecstasy":"mdma","adam":"mdma","xtc":"mdma","mandy":"mdma","x":"mdma","md":"mdma","meclonazepam":"benzodiazepines","medazepam":"benzodiazepines","nobrium":"benzodiazepines","azepamid":"benzodiazepines","rudotel":"benzodiazepines","raporan":"benzodiazepines","mezapam":"benzodiazepines","talis":"benzodiazepines","mephedrone":"mephedrone","4mmc":"mephedrone","meowmeow":"mephedrone","mcat":"mephedrone","4methylmethcathinone":"mephedrone","methadone":"opioids","methoxyacetylfentanyl":"opioids","maf":"opioids","desfluoroocfentanil":"opioids","metizolam":"benzodiazepines","metiz":"benzodiazepines","desmethyletizolam":"benzodiazepines","midazolam":"benzodiazepines","morpheridine":"opioids","morphine":"opioids","mt45":"opioids","ic6":"opioids","mushrooms":"mushrooms","psilocybin":"mushrooms","shrooms":"mushrooms","mushroom":"mushrooms","psylocybin":"mushrooms","nicomorphine":"opioids","nifoxipam":"benzodiazepines","nimetazepam":"benzodiazepines","erimin":"benzodiazepines","nitemazepam":"benzodiazepines","3hydroxynimetazepam":"benzodiazepines","nitrazepam":"benzodiazepines","mogadon":"benzodiazepines","baronite":"benzodiazepines","dormin":"benzodiazepines","dreem":"benzodiazepines","enzed":"benzodiazepines","gentravit":"benzodiazepines","hypnonex":"benzodiazepines","hypnoril":"benzodiazepines","hypnotex":"benzodiazepines","konit":"benzodiazepines","nicare":"benzodiazepines","nigap":"benzodiazepines","nipam":"benzodiazepines","nirosun":"benzodiazepines","nitavan":"benzodiazepines","nithra":"benzodiazepines","nitrazolam":"benzodiazepines","nitrous":"nitrous","n2o":"nitrous","laughinggas":"nitrous","n20":"nitrous","nos":"nitrous","nitrousoxide":"nitrous","hippycrack":"nitrous","nordazepam":"benzodiazepines","nordaz":"benzodiazepines","nordiazepam":"benzodiazepines","desmethyldiazepam":"benzodiazepines","norflurazepam":"benzodiazepines","ndesalkylflurazepam":"benzodiazepines","odesmethyltramadol":"opioids","odt":"opioids","osmt":"opioids","odsmt":"opioids","opium":"opioids","o":"opioids","oxazepam":"benzodiazepines","serax":"benzodiazepines","oxycodone":"opioids","oxy":"opioids","oxycontin":"opioids","percocet":"opioids","oxynorm":"opioids","oxymorphone":"opioids","opana":"opioids","stopsigns":"opioids","palfium":"opioids","dextromoramide":"opioids","parafluorobutyrfentanyl":"opioids","4fluorobutyrfentanyl":"opioids","pfbf":"opioids","4fbf":"opioids","parafluorofentanyl":"opioids","pff":"opioids","4fluorofentanyl":"opioids","pentazocine":"opioids","talwin":"opioids","phenazepam":"benzodiazepines","pinazepam":"benzodiazepines","domar":"benzodiazepines","prazepam":"benzodiazepines","centrac":"benzodiazepines","centrax":"benzodiazepines","demetrin":"benzodiazepines","lysanxia":"benzodiazepines","pozapam":"benzodiazepines","prasepine":"benzodiazepines","prazene":"benzodiazepines","reapam":"benzodiazepines","trepidan":"benzodiazepines","propoxyphene":"opioids","pst":"opioids","poppyseedtea":"opioids","poppytea":"opioids","pyrazolam":"benzodiazepines","quazepam":"benzodiazepines","doral":"benzodiazepines","rilmazafone":"benzodiazepines","rhythmy":"benzodiazepines","sufentanil":"opioids","tapentadol":"opioids","temazepam":"benzodiazepines","restoril":"benzodiazepines","tetrahydrofuranfentanyl":"opioids","thff":"opioids","tetrazepam":"benzodiazepines","tianeptine":"opioids","tilidine":"opioids","tilidate":"opioids","tilidin":"opioids","valoron":"opioids","valtran":"opioids","tramadol":"tramadol","tram":"tramadol","triazolam":"benzodiazepines","halcion":"benzodiazepines","u47700":"opioids","u49900":"opioids","u51754":"opioids","metheneu47700":"opioids","valerylfentanyl":"opioids","vf":"opioids","w15":"opioids","zolazepam":"benzodiazepines"}};
     // TRIPSIT-DATA-END
 
-    // The chips offered in the combination picker: every charted preset,
-    // then picker-only groups people take but rarely log. Muted dot
-    // colours mark the picker-only ones as "not one of your cards".
-    // Tramadol gets its own chip because TripSit rates it as a separate,
-    // stricter column than other opioids — folding it into "Opioids"
-    // would soften their warning.
+    // Combination-picker groups. Tramadol stays separate because TripSit
+    // rates it separately from other opioids.
     const COMBO_GROUPS = [
       ...PRESETS.filter(p => p.ts).map(p => ({ id: p.ts, label: p.name, color: p.color, blend: p.blend })),
       { id: 'benzodiazepines', label: 'Benzos',   color: '#8da2c0' },
@@ -1443,8 +1350,7 @@
       return TRIPSIT.names[normTripsit(name)] || null;
     }
 
-    // Small inline icons (SVG, drawn locally — no network). Typed glyphs like
-    // ✎ and ✕ render with different weights on every platform; these don't.
+    // Inline SVG icons keep rendering consistent and offline.
     const ICONS = {
       pencil: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>',
       info:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M12 11.2v5"/><path d="M12 7.6h.01"/></svg>',
@@ -1452,6 +1358,29 @@
       x:      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
       repeat: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
     };
+
+    // Builds the small icon buttons used all over the UI.
+    function iconBtn(className, title, ariaLabel, svg) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = className;
+      if (title) b.title = title;
+      if (ariaLabel) b.setAttribute('aria-label', ariaLabel);
+      b.innerHTML = svg;
+      return b;
+    }
+
+    // The unit dropdowns (dose row + log editor) share one option list.
+    function makeUnitSelect(value) {
+      const sel = document.createElement('select');
+      for (const u of UNIT_OPTIONS) {
+        const opt = document.createElement('option');
+        opt.value = u.value; opt.textContent = u.label;
+        sel.appendChild(opt);
+      }
+      sel.value = value;
+      return sel;
+    }
 
     // --- State ---
     // IMPORTANT: the storage key stays the same so existing data keeps working.
@@ -1481,11 +1410,19 @@
         });
         return parsed;
       } catch (e) {
-        console.error('State load failed, resetting:', e);
+        console.error('State load failed:', e);
+        // Data is irreplaceable: keep the unreadable copy under a backup key
+        // so the next save can't destroy it, and say so once the UI is up.
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) localStorage.setItem(STORAGE_KEY + '_backup', raw);
+        } catch {}
+        stateLoadFailed = true;
         return structuredClone(initialState);
       }
     }
 
+    let stateLoadFailed = false;
     let state = loadState();
     function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {} }
 
@@ -1513,9 +1450,7 @@
     const snackbarAction = $('#snackbar-action');
     let toastTimer = null;
     let toastActionFn = null;
-    // Optionally pass an action ("Undo") — deletions happen right away and the
-    // toast offers a few seconds to take them back, instead of an "Are you
-    // sure?" question before every little thing.
+    // Optional Undo action for immediate, reversible deletions.
     function showToast(message, duration=2500, actionLabel=null, onAction=null) {
       if (toastTimer) clearTimeout(toastTimer);
       snackbarMsg.textContent = message;
@@ -1536,64 +1471,79 @@
       if (fn) fn();
     });
 
+    // =====================================================================
+    // Shared dialog behaviour. Every overlay dialog opens and closes the
+    // same way: tap outside or press Escape to close, Tab stays inside the
+    // dialog, and focus returns to where it was before opening.
+    // =====================================================================
+    function setupModal(overlay, onClose) {
+      let lastFocused = null;
+      function open(focusEl) {
+        lastFocused = document.activeElement;
+        overlay.style.display = 'flex';
+        overlay.classList.add('show');
+        if (focusEl) focusEl.focus({ preventScroll: true });
+      }
+      function close() {
+        overlay.classList.remove('show');
+        overlay.style.display = 'none';
+        if (onClose) onClose();
+        if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+      }
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      document.addEventListener('keydown', (e) => {
+        if (!overlay.classList.contains('show')) return;
+        if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+        if (e.key === 'Tab') {
+          const items = [...overlay.querySelectorAll('button, [href], input, select, textarea')]
+            .filter(el => !el.hidden && !el.disabled && el.offsetParent !== null);
+          if (!items.length) return;
+          const first = items[0], last = items[items.length - 1];
+          if (!overlay.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+          else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      });
+      return { open, close };
+    }
+
     // Confirmation modal
-    const confirmOverlay = $('#confirm');
     const confirmMsg = $('#confirm-msg');
     const btnYes = $('#confirm-yes');
     const btnNo = $('#confirm-no');
     let confirmResolver = null;
-    let lastFocused = null;
-
+    let confirmResult = false; // closing any other way counts as "No"
+    const confirmModal = setupModal($('#confirm'), () => {
+      if (typeof confirmResolver === 'function') { const r = confirmResolver; confirmResolver = null; r(confirmResult); }
+    });
     function openConfirm(message) {
       confirmMsg.textContent = message;
-      lastFocused = document.activeElement;
-      confirmOverlay.style.display = 'flex';
-      confirmOverlay.classList.add('show');
-      btnNo.focus();
+      confirmResult = false;
+      confirmModal.open(btnNo);
       return new Promise((resolve) => { confirmResolver = resolve; });
     }
-    function closeConfirm(result=false) {
-      confirmOverlay.classList.remove('show');
-      confirmOverlay.style.display = 'none';
-      if (typeof confirmResolver === 'function') { const r = confirmResolver; confirmResolver = null; r(result); }
-      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
-    }
+    function closeConfirm(result=false) { confirmResult = result; confirmModal.close(); }
     btnYes.addEventListener('click', () => closeConfirm(true));
     btnNo.addEventListener('click', () => closeConfirm(false));
 
     // --- Substance-info dialog (the ⓘ on preset cards) ---
-    // Shows WHOSE information it is (PsychonautWiki) before the browser
-    // opens, and gives mis-taps a cheap way out. The dialog itself makes
-    // no network request — only the link does, and only when tapped.
-    const wikiOverlay = $('#wiki');
+    // Names PsychonautWiki before opening any external link.
     const wikiOpenLink = $('#wiki-open');
-    let wikiLastFocused = null;
+    const wikiModal = setupModal($('#wiki'));
     function openWikiDialog(preset) {
       // "Speed (Amphetamine)" when the article is named differently
       $('#wiki-name').textContent = preset.wiki ? `${preset.name} (${preset.wiki})` : preset.name;
       $('#wiki-dot').style.background = preset.blend ? blendDotCss(preset.blend) : preset.color;
       wikiOpenLink.href = presetWikiUrl(preset);
-      wikiLastFocused = document.activeElement;
-      wikiOverlay.style.display = 'flex';
-      wikiOverlay.classList.add('show');
-      $('#wiki-cancel').focus();
+      wikiModal.open($('#wiki-cancel'));
     }
-    function closeWikiDialog() {
-      wikiOverlay.classList.remove('show');
-      wikiOverlay.style.display = 'none';
-      if (wikiLastFocused && typeof wikiLastFocused.focus === 'function') wikiLastFocused.focus();
-    }
-    $('#wiki-cancel').addEventListener('click', closeWikiDialog);
-    wikiOpenLink.addEventListener('click', () => closeWikiDialog()); // link still opens; the dialog just tidies up
-    wikiOverlay.addEventListener('click', (e) => { if (e.target === wikiOverlay) closeWikiDialog(); });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && wikiOverlay.classList.contains('show')) { e.preventDefault(); closeWikiDialog(); }
-    });
+    $('#wiki-cancel').addEventListener('click', wikiModal.close);
+    wikiOpenLink.addEventListener('click', () => wikiModal.close()); // link still opens; the dialog just tidies up
 
     // --- Combination checker ---
-    // The user asks, the user confirms the selection, TripSit answers.
-    // Nothing here ever runs on its own while doses are being logged.
+    // User-initiated only: select substances, then show TripSit's text.
     const comboOverlay = $('#combo');
+    const comboModal = setupModal(comboOverlay);
     const comboChipsEl = $('#combo-chips');
     const comboMatched = $('#combo-matched');
     const comboUnmatched = $('#combo-unmatched');
@@ -1602,7 +1552,6 @@
     const comboResults = $('#combo-results');
     const comboList = $('#combo-list');
     let comboSelected = new Set();
-    let comboLastFocused = null;
 
     // A pair needs two sides — until then the button says why it's waiting
     function comboUpdateShow() {
@@ -1640,9 +1589,7 @@
     }
 
     function openCombo() {
-      // Distinct substances in tonight's log — by the card's current name
-      // where the card still exists (so renames count), otherwise by the
-      // name that was logged at the time.
+      // Distinct logged substances, using current card names when available.
       const seen = new Map();
       for (const e of state.entries) {
         const card = state.drugs.find(d => d.id === e.drugId);
@@ -1671,10 +1618,7 @@
       comboPicker.hidden = false;
       comboResults.hidden = true;
       $('#combo-snapshot').textContent = TRIPSIT.snapshot;
-      comboLastFocused = document.activeElement;
-      comboOverlay.style.display = 'flex';
-      comboOverlay.classList.add('show');
-      $('#combo-close').focus();
+      comboModal.open($('#combo-close'));
     }
 
     function renderComboResults() {
@@ -1722,32 +1666,17 @@
       comboOverlay.querySelector('.modal').scrollTop = 0;
     }
 
-    function closeCombo() {
-      comboOverlay.classList.remove('show');
-      comboOverlay.style.display = 'none';
-      if (comboLastFocused && typeof comboLastFocused.focus === 'function') comboLastFocused.focus();
-    }
     $('#combo-open').addEventListener('click', openCombo);
-    $('#combo-close').addEventListener('click', closeCombo);
+    $('#combo-close').addEventListener('click', comboModal.close);
     $('#combo-back').addEventListener('click', () => { comboPicker.hidden = false; comboResults.hidden = true; });
     comboShowBtn.addEventListener('click', () => { if (comboSelected.size >= 2) renderComboResults(); });
-    comboOverlay.addEventListener('click', (e) => { if (e.target === comboOverlay) closeCombo(); });
+    // Enter answers "Yes" in the confirm dialog (Escape/outside already mean "No")
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && comboOverlay.classList.contains('show')) { e.preventDefault(); closeCombo(); }
-    });
-    confirmOverlay.addEventListener('click', (e) => { if (e.target === confirmOverlay) closeConfirm(false); });
-    document.addEventListener('keydown', (e) => {
-      if (confirmOverlay.classList.contains('show')) {
-        if (e.key === 'Escape') { e.preventDefault(); closeConfirm(false); }
-        if (e.key === 'Enter') { e.preventDefault(); closeConfirm(true); }
-      }
+      if ($('#confirm').classList.contains('show') && e.key === 'Enter') { e.preventDefault(); closeConfirm(true); }
     });
 
     // --- In-app number pad ---
-    // iPhones draw small letters under the digits on the system keypad and
-    // websites can't turn that off, so the app brings its own clean pad.
-    // It can also open by itself (the system keyboard only opens during a
-    // real tap), e.g. right after a new drug is named.
+    // Custom pad avoids the phone keypad and can be opened programmatically.
     const numpad = $('#numpad');
     const numpadActionBtn = $('#numpad-action');
     let padTarget = null;   // the input being typed into
@@ -1762,10 +1691,7 @@
       numpadActionBtn.textContent = actionLabel;
       numpad.classList.add('show');
       document.body.classList.add('numpad-open');
-      // Give the page its extra bottom room first, then scroll just far
-      // enough that the field sits clearly above the pad. Computed by hand
-      // (not scrollIntoView) so the result is exact regardless of what the
-      // browser's own focus handling did.
+      // Add bottom room first, then scroll the field above the pad.
       setTimeout(() => {
         const r = input.getBoundingClientRect();
         const padTop = window.innerHeight - numpad.offsetHeight;
@@ -1822,14 +1748,13 @@
     });
 
     // --- Share with a Friend ---
-    // Draws the current log as a tidy image (which drug, dose, when — grouped
-    // by day, with totals at the end), shows it in a preview first, and only
-    // opens the phone's share sheet after "Send" is tapped. Nothing is
-    // uploaded anywhere; the image goes only to whoever the user sends it
-    // to. On computers without a share sheet it downloads.
-    const sharePreviewOverlay = $('#share-preview');
+    // Builds a local image preview, then shares or downloads it.
     const sharePreviewImg = $('#share-preview-img');
     let shareFile = null; // the image waiting in the preview
+    const sharePreviewModal = setupModal($('#share-preview'), () => {
+      if (sharePreviewImg.src) { URL.revokeObjectURL(sharePreviewImg.src); sharePreviewImg.removeAttribute('src'); }
+      shareFile = null;
+    });
 
     $('#share-log').addEventListener('click', async () => {
       if (!state.entries.length) { showToast('Nothing to share yet — the log is empty.'); return; }
@@ -1839,32 +1764,19 @@
         if (!blob) { showToast('Could not create the image.'); return; }
         shareFile = new File([blob], 'dose-log.png', { type: 'image/png' });
         sharePreviewImg.src = URL.createObjectURL(blob);
-        sharePreviewOverlay.style.display = 'flex';
-        sharePreviewOverlay.classList.add('show');
-        $('#share-send').focus();
+        sharePreviewModal.open($('#share-send'));
       } catch (err) {
         console.error('Share failed:', err);
         showToast('Sharing failed — please try again.');
       }
     });
 
-    function closeSharePreview() {
-      sharePreviewOverlay.classList.remove('show');
-      sharePreviewOverlay.style.display = 'none';
-      if (sharePreviewImg.src) { URL.revokeObjectURL(sharePreviewImg.src); sharePreviewImg.removeAttribute('src'); }
-      shareFile = null;
-    }
-
-    $('#share-cancel').addEventListener('click', closeSharePreview);
-    sharePreviewOverlay.addEventListener('click', (e) => { if (e.target === sharePreviewOverlay) closeSharePreview(); });
-    document.addEventListener('keydown', (e) => {
-      if (sharePreviewOverlay.classList.contains('show') && e.key === 'Escape') { e.preventDefault(); closeSharePreview(); }
-    });
+    $('#share-cancel').addEventListener('click', sharePreviewModal.close);
 
     $('#share-send').addEventListener('click', async () => {
       const file = shareFile;
       if (!file) return;
-      closeSharePreview();
+      sharePreviewModal.close();
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({ files: [file] });
@@ -1941,8 +1853,7 @@
       for (const e of entries) { const k = dayKey(e.ts); if (!groups[k]) groups[k] = []; groups[k].push(e); }
       const days = Object.keys(groups).sort((a, b) => (a < b ? 1 : -1));
 
-      // Totals per drug for the bottom of the image (one line per drug,
-      // listed in the same order the drugs appear in the log)
+      // Totals per drug, ordered by first appearance in the log.
       const totalDrugs = [];
       const seenDrugIds = new Set();
       for (const e of entries) {
@@ -2008,8 +1919,7 @@
           const cy = y + ROW_H / 2;
           const name = lookupDrugName(e.drugId) || e.drugNameAtEntry || 'Drug';
 
-          // Colour dot + drug name (left) — blended presets keep their
-          // gradient dot even in the exported image
+          // Colour dot + drug name; preset blends are preserved.
           const dotColor = colorForEntry(e) || '#56c1ab';
           ctx.fillStyle = blendCanvasFill(ctx, PAD + 5, cy, 5, name, dotColor);
           ctx.beginPath();
@@ -2039,8 +1949,7 @@
         y += DAY_GAP;
       }
 
-      // Totals section: styled like a day section, one row per drug with
-      // its overall sum (per unit) across the whole log
+      // Totals section: one row per drug, summed per unit.
       ctx.fillStyle = COL.accent;
       ctx.font = font(700, 12.5);
       const totalsTitle = 'Total taken';
@@ -2113,20 +2022,16 @@
         const card = document.createElement('div');
         card.className = `card ${drug.expanded ? '' : 'collapsed'}`;
         card.dataset.id = drug.id;
-        // Expanding/collapsing: tap anywhere on the card header (name, big
-        // numbers, empty space) or the chevron. Buttons and the colour dot
-        // keep their own jobs and never toggle the card.
+        // Header taps toggle the card; controls keep their own actions.
 
         const strip = document.createElement('div');
         strip.className = 'color-strip';
-        // Psychedelic presets wear their blend on the strip and the little
-        // colour button; everything else stays a flat signature colour.
+        // Preset blends appear on the strip and colour dot.
         const cardBlend = blendFor(drug.name, drug.color);
         strip.style.background = cardBlend ? blendStripCss(cardBlend) : drug.color;
         card.appendChild(strip);
 
-        // Echo the drug's colour on the whole card: a tinted border plus a
-        // very faint wash of the same colour fading down from the top edge.
+        // Echo the drug colour in the border and top wash.
         card.style.borderColor = hexToRgba(drug.color, 0.28);
         card.style.background =
           `linear-gradient(180deg, ${hexToRgba(drug.color, 0.06)} 0%, rgba(0,0,0,0) 96px), ` +
@@ -2141,13 +2046,11 @@
 
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
-        // Class and label avoid the word "name" so iOS doesn't offer
-        // "AutoFill Contact" when typing a drug title
+        // Avoid "name" so iOS does not offer contact autofill.
         nameInput.className = 'drug-title';
         nameInput.value = drug.name;
         nameInput.dataset.prev = drug.name;
-        // Read-only until the pencil is tapped: tapping the title then
-        // expands the card instead of opening the keyboard by surprise
+        // Read-only until the pencil is tapped.
         nameInput.readOnly = true;
         nameInput.tabIndex = -1; // keyboard users rename via the pencil button
         // "next" because the flow continues into the amount field
@@ -2160,10 +2063,7 @@
         nameInput.setAttribute('autocapitalize', 'off');
         nameInput.setAttribute('spellcheck', 'false');
 
-        // Quick-pick chips: rebuilt every time the title enters edit mode so
-        // substances that already have a card tonight drop out of the row.
-        // Hiding after blur is delayed a beat — on phones the tap on a chip
-        // blurs the title first, and the chip must still exist to get the tap.
+        // Rebuilt on edit so existing cards drop out. Delayed hide lets taps land.
         const presetRow = document.createElement('div');
         presetRow.className = 'preset-row';
         let presetHideTimer = null;
@@ -2189,18 +2089,14 @@
             chip.addEventListener('click', (ev) => {
               ev.stopPropagation();
               clearTimeout(presetHideTimer);
-              // End the rename BEFORE touching state: render() below clears
-              // the grid, which makes the still-focused title fire its blur
-              // handler mid-render — and that handler would save the old
-              // name right over the preset's. Blurring first settles it.
+              // Blur before render so the old title cannot save over the preset.
               nameInput.blur();
               drug.name = p.name;
               drug.color = p.color;
               drug.lastUnit = p.unit; // the dose row's unit picker reads this
               saveState();
               render();
-              // Flow straight into the dose: focusing the amount field opens
-              // our own number pad (the system keyboard stays closed)
+              // Flow straight into dose entry.
               if (drug.expanded) {
                 const numEl = document.querySelector(`[data-id="${drug.id}"] .dose-grid input`);
                 if (numEl) numEl.focus();
@@ -2211,9 +2107,7 @@
           presetRow.classList.add('show');
         };
 
-        // The pencil that unlocks the title for renaming. Must focus the
-        // input synchronously (inside the real tap) or iOS keeps the
-        // keyboard closed — same rule as in the "+ Add substance" handler.
+        // Focus synchronously so iOS opens the keyboard.
         const startTitleEdit = () => {
           nameInput.readOnly = false;
           nameInput.classList.add('editing');
@@ -2221,22 +2115,11 @@
           nameInput.focus();
           nameInput.select();
         };
-        const renameBtn = document.createElement('button');
-        renameBtn.type = 'button';
-        renameBtn.className = 'icon-btn title-edit-btn';
-        renameBtn.title = 'Rename';
-        renameBtn.setAttribute('aria-label', `Rename ${drug.name}`);
-        renameBtn.innerHTML = ICONS.pencil;
+        const renameBtn = iconBtn('icon-btn title-edit-btn', 'Rename', `Rename ${drug.name}`, ICONS.pencil);
         renameBtn.addEventListener('click', (e) => { e.stopPropagation(); startTitleEdit(); });
 
-        // ⓘ beside the pencil, only when the name matches a preset — free-typed
-        // names get no link (we can't vouch for what article they'd map to).
-        // Opens the substance-info dialog, never the browser directly.
-        const infoBtn = document.createElement('button');
-        infoBtn.type = 'button';
-        infoBtn.className = 'icon-btn info-btn';
-        infoBtn.title = 'Substance info';
-        infoBtn.innerHTML = ICONS.info;
+        // Preset-only info; free-typed names get no external mapping.
+        const infoBtn = iconBtn('icon-btn info-btn', 'Substance info', null, ICONS.info);
         infoBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           const p = findPreset(drug.name);
@@ -2250,9 +2133,7 @@
         };
         syncInfoBtn();
 
-        // Invisible mirror of the title text: measured to shrink the input
-        // to its content, so the pencil sits right next to the name instead
-        // of at the far end of the row. Re-measured on every keystroke.
+        // Hidden mirror keeps the title input sized to its text.
         const sizer = document.createElement('span');
         sizer.className = 'title-sizer';
         sizer.setAttribute('aria-hidden', 'true');
@@ -2262,29 +2143,20 @@
         };
         nameInput.addEventListener('input', sizeTitle);
 
-        // Repeat button: shows the actual dose it will add ("↻ 120 mg") —
-        // shorter than "Repeat Last Dose" and answers "what will this do?"
-        // It lives in the meta row next to TOTAL (appended there below).
+        // Repeat button shows the exact dose it will add.
         const lastEntry = getLastEntry(drug.id);
         let repeatBtn = null;
         if (lastEntry) {
           const lastDoseText = displayValueUnit(lastEntry.value, lastEntry.unit);
-          repeatBtn = document.createElement('button');
-          repeatBtn.type = 'button';
-          repeatBtn.className = 'btn-sm repeat-btn';
-          repeatBtn.innerHTML = ICONS.repeat;
+          repeatBtn = iconBtn('btn-sm repeat-btn', `Repeat last dose (${lastDoseText})`, `Repeat last dose: ${lastDoseText}`, ICONS.repeat);
           repeatBtn.appendChild(document.createTextNode(lastDoseText));
-          repeatBtn.title = `Repeat last dose (${lastDoseText})`;
-          repeatBtn.setAttribute('aria-label', `Repeat last dose: ${lastDoseText}`);
           repeatBtn.onclick = (e) => {
             e.stopPropagation();
             addEntryStandard(drug.id, drug.name, null, null, drug.color, lastEntry.value, lastEntry.unitRaw);
           };
         }
 
-        // One shared toggle used by the chevron AND taps on the header.
-        // Toggles the class directly (instead of re-rendering everything) so
-        // the open/close animation can play. Sort order doesn't change here.
+        // Shared toggle for chevron and header taps; no re-render needed.
         const chevBtn = document.createElement('button');
         const toggleCard = () => {
           drug.expanded = !drug.expanded;
@@ -2341,8 +2213,7 @@
           menu.appendChild(opt);
         });
 
-        // Place the floating menu just below the dot, flipping above or
-        // nudging sideways if it would run off the edge of the screen.
+        // Place the menu near the dot, keeping it onscreen.
         const positionMenu = () => {
           const r = colorBtn.getBoundingClientRect();
           const gap = 6, pad = 8;
@@ -2386,8 +2257,7 @@
         meta.className = 'meta';
         meta.id = `meta-${drug.id}`;
 
-        // "Since last dose" is the headline number — for pacing yourself,
-        // when you last dosed matters more than the running total.
+        // "Since last dose" is the headline metric.
         const lastBlock = document.createElement('div');
         lastBlock.className = 'meta-block';
         const lastLabel = document.createElement('span');
@@ -2412,8 +2282,7 @@
         totalBlock.appendChild(totalLabel);
         totalBlock.appendChild(totalSpan);
 
-        // Right half of the meta row: repeat button (if there is a dose to
-        // repeat) next to the TOTAL block
+        // Repeat button sits next to the total.
         const metaRight = document.createElement('div');
         metaRight.className = 'meta-right';
         if (repeatBtn) metaRight.appendChild(repeatBtn);
@@ -2449,21 +2318,14 @@
         numInput.setAttribute('aria-label', 'Dose amount');
         numInput.placeholder = 'Amount';
 
-        const unitSelect = document.createElement('select');
+        const unitSelect = makeUnitSelect(drug.lastUnit || 'mg');
         unitSelect.setAttribute('aria-label', 'Unit');
-        for (const u of UNIT_OPTIONS) {
-          const opt = document.createElement('option');
-          opt.value = u.value; opt.textContent = u.label; unitSelect.appendChild(opt);
-        }
-        unitSelect.value = drug.lastUnit || 'mg';
 
         const addBtn = document.createElement('button');
         addBtn.className = 'add-btn';
         addBtn.textContent = 'Add';
 
-        // "Taken earlier?" — optionally backdate the next Add. A quiet link
-        // below the dose row swaps into a time field; while a time is set,
-        // the Add button says "Add at 21:30" so there's no ambiguity.
+        // Optional backdating for the next Add.
         let earlierActive = false;
 
         const earlierWrap = document.createElement('div');
@@ -2482,11 +2344,7 @@
         timeInput.type = 'time';
         timeInput.className = 'earlier-time';
         timeInput.setAttribute('aria-label', 'Time taken');
-        const earlierCancel = document.createElement('button');
-        earlierCancel.type = 'button';
-        earlierCancel.className = 'earlier-cancel';
-        earlierCancel.innerHTML = ICONS.x;
-        earlierCancel.setAttribute('aria-label', 'Cancel earlier time');
+        const earlierCancel = iconBtn('earlier-cancel', null, 'Cancel earlier time', ICONS.x);
         earlierEdit.appendChild(earlierLabel);
         earlierEdit.appendChild(timeInput);
         earlierEdit.appendChild(earlierCancel);
@@ -2516,8 +2374,7 @@
           if (isNaN(hh) || isNaN(mm)) return undefined;
           const d = new Date();
           d.setHours(hh, mm, 0, 0);
-          // A time later than now means "yesterday evening" — e.g. entering
-          // 23:50 at 00:30 on a night that crossed midnight
+          // Later-than-now means yesterday, for nights crossing midnight.
           if (d > new Date()) d.setDate(d.getDate() - 1);
           return d;
         };
@@ -2540,9 +2397,7 @@
         nameInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              // On an expanded card, jump straight to the amount field (this
-              // blurs the name, saving it, and our own number pad opens).
-              // On a collapsed card the amount field is hidden — just save.
+              // Expanded card: jump to amount; collapsed card: just save.
               if (drug.expanded) numInput.focus();
               else nameInput.blur();
             }
@@ -2592,10 +2447,7 @@
           }
           drug.name = proposed;
           renameBtn.setAttribute('aria-label', `Rename ${drug.name}`);
-          // Typed a known substance by hand? Adopt its canonical spelling,
-          // signature colour and unit, restyling in place — no render()
-          // here, because blur also fires on the way into the amount field
-          // and rebuilding the cards would destroy the field mid-focus.
+          // Known preset typed by hand: adopt spelling, colour and unit in place.
           const preset = findPreset(proposed);
           if (preset) {
             drug.name = preset.name;
@@ -2618,10 +2470,7 @@
         // The chips linger briefly so a tap on one still lands (see above)
         nameInput.addEventListener('blur', hidePresetsSoon);
 
-        // Remove — a small red-tinted pill at the bottom LEFT of the body
-        // (same danger style as the confirm dialog), diagonal from the Add
-        // button so a missed tap at Add can't land on it. Deletes right
-        // away; the toast has Undo.
+        // Remove lives away from Add and is undoable from the toast.
         const removeLink = document.createElement('button');
         removeLink.type = 'button';
         removeLink.className = 'btn-sm btn-danger';
@@ -2660,9 +2509,7 @@
     window.addEventListener('resize', repositionOpenMenus);
 
     function renderLog() {
-      // One flat list, newest first. The app is designed around a single
-      // night at a time (the welcome-back prompt offers a fresh start), so
-      // there are no day-separator rows.
+      // One flat, newest-first list for the single-night model.
       const entries = [...state.entries].sort((a,b) => b.ts - a.ts);
       logBody.innerHTML = '';
       if (!entries.length) {
@@ -2701,10 +2548,8 @@
             amountInput.value = (e.value != null && isFinite(e.value)) ? e.value : '';
             useNumpad(amountInput, 'Save', () => saveEdit(e.id));
 
-            const unitSelect = document.createElement('select');
+            const unitSelect = makeUnitSelect(e.unitRaw || e.unit || 'mg');
             unitSelect.id = `edit-unit-${e.id}`;
-            for (const u of UNIT_OPTIONS) { const opt = document.createElement('option'); opt.value = u.value; opt.textContent = u.label; unitSelect.appendChild(opt); }
-            unitSelect.value = e.unitRaw || e.unit || 'mg';
 
             const dtInput = document.createElement('input');
             dtInput.type = 'time';
@@ -2742,41 +2587,21 @@
           tdActions.className = 'row-actions';
 
           if (editingId === e.id) {
-            const saveBtn = document.createElement('button');
-            saveBtn.className = 'icon-btn';
-            saveBtn.type = 'button';
-            saveBtn.innerHTML = ICONS.check;
-            saveBtn.title = 'Save';
-            saveBtn.setAttribute('aria-label', 'Save');
+            const saveBtn = iconBtn('icon-btn', 'Save', 'Save', ICONS.check);
             saveBtn.addEventListener('touchstart', (ev) => { ev.preventDefault(); saveEdit(e.id); });
             saveBtn.addEventListener('click', () => saveEdit(e.id));
 
-            const cancelBtn = document.createElement('button');
-            cancelBtn.className = 'icon-btn';
-            cancelBtn.type = 'button';
-            cancelBtn.innerHTML = ICONS.x;
-            cancelBtn.title = 'Cancel';
-            cancelBtn.setAttribute('aria-label', 'Cancel');
+            const cancelBtn = iconBtn('icon-btn', 'Cancel', 'Cancel', ICONS.x);
             cancelBtn.addEventListener('click', cancelEdit);
 
             tdActions.appendChild(saveBtn);
             tdActions.appendChild(cancelBtn);
           } else {
-            const editBtn = document.createElement('button');
-            editBtn.className = 'icon-btn';
-            editBtn.type = 'button';
-            editBtn.innerHTML = ICONS.pencil;
-            editBtn.title = 'Edit';
-            editBtn.setAttribute('aria-label', 'Edit entry');
+            const editBtn = iconBtn('icon-btn', 'Edit', 'Edit entry', ICONS.pencil);
             editBtn.dataset.action = 'edit-entry';
             editBtn.dataset.entryId = e.id;
 
-            const delBtn = document.createElement('button');
-            delBtn.className = 'icon-btn icon-danger';
-            delBtn.type = 'button';
-            delBtn.innerHTML = ICONS.x;
-            delBtn.title = 'Remove this entry';
-            delBtn.setAttribute('aria-label', 'Remove entry');
+            const delBtn = iconBtn('icon-btn icon-danger', 'Remove this entry', 'Remove entry', ICONS.x);
             delBtn.dataset.action = 'remove-entry';
             delBtn.dataset.entryId = e.id;
 
@@ -2850,6 +2675,13 @@
     }
 
     // --- Actions ---
+    // The whole text must be a number: "1,5" and "2." are fine, "1abc" is not
+    // (pasting or a hardware keyboard can get past the in-app number pad).
+    function parseAmount(text) {
+      const t = String(text).trim().replace(',', '.');
+      return /^(\d+\.?\d*|\.\d+)$/.test(t) ? parseFloat(t) : NaN;
+    }
+
     function addEntryStandard(drugId, currentDrugName, numInput, unitSelect, colorAtEntry, explicitValue, explicitUnitRaw, tsOverride) {
       let value, unitRaw;
 
@@ -2859,9 +2691,8 @@
         unitRaw = explicitUnitRaw;
       } else {
         // Manual input path
-        const raw = numInput.value.replace(',', '.'); // Handle comma decimals
-        value = parseFloat(raw);
-        if (!raw || !isFinite(value) || value <= 0) {
+        value = parseAmount(numInput.value);
+        if (!isFinite(value) || value <= 0) {
           showToast('Enter a positive amount.');
           if (numInput) {
             numInput.focus();
@@ -2894,9 +2725,7 @@
         : `Added ${dosageText} of ${currentDrugName}`);
     }
 
-    // No auto-focus here: the number pad should only slide up when the
-    // person actually taps the amount field, not the moment editing starts
-    // (it used to cover the row being edited).
+    // Do not open the number pad until the amount field is tapped.
     function startEdit(entryId) { editingId = entryId; render(); }
 
     function saveEdit(entryId) {
@@ -2906,9 +2735,8 @@
       const e = state.entries.find(x => x.id === entryId);
       if (!e || !amountEl || !unitEl || !timeEl) return;
 
-      const amountRaw = amountEl.value.replace(',', '.'); // Handle comma decimals
-      const value = parseFloat(amountRaw);
-      if (!amountEl.value || !isFinite(value) || value <= 0) {
+      const value = parseAmount(amountEl.value);
+      if (!isFinite(value) || value <= 0) {
         showToast('Enter a positive amount.');
         amountEl.focus();
         return;
@@ -2944,20 +2772,24 @@
     let editingId = null;
     function syncEditingClass() { document.body.classList.toggle('editing', !!editingId); }
 
+    // Clears the log right away — the toast offers a few seconds to undo.
+    // Undo merges the old entries back, so a dose logged in between survives.
+    function clearLogWithUndo(message) {
+      const backup = state.entries;
+      state.entries = [];
+      saveState();
+      render();
+      showToast(message, 6000, 'Undo', () => {
+        state.entries = backup.concat(state.entries);
+        saveState();
+        render();
+      });
+    }
+
     // Event delegation
     document.addEventListener('click', async (e) => {
       if (e.target && e.target.id === 'clear-log') {
-        if (!state.entries.length) return;
-        // Clears right away — the toast offers a few seconds to undo
-        const backup = state.entries;
-        state.entries = [];
-        saveState();
-        render();
-        showToast('Log cleared.', 6000, 'Undo', () => {
-          state.entries = backup;
-          saveState();
-          render();
-        });
+        if (state.entries.length) clearLogWithUndo('Log cleared.');
       }
 
       if (e.target && e.target.id === 'add-med') {
@@ -2969,11 +2801,7 @@
         saveState();
         render();
 
-        // Start renaming IMMEDIATELY — still inside the tap itself. Phones
-        // only open the keyboard for a focus that happens during a real user
-        // tap; even a tiny delay and iOS keeps the keyboard shut. Clicking
-        // the card's pencil button runs its handler synchronously, which
-        // unlocks the (normally read-only) title and focuses it.
+        // Start renaming inside the tap so phones open the keyboard.
         const card = document.querySelector(`[data-id="${newId}"]`);
         const newNameInput = card ? card.querySelector('.drug-title') : null;
         const pencil = card ? card.querySelector('.title-edit-btn') : null;
@@ -3009,35 +2837,21 @@
       }
     });
 
-    // Privacy modal controls
-    const privacyOverlay = $('#privacy');
-    const privacyOpen = $('#privacy-open');
-    const privacyClose = $('#privacy-close');
-    privacyOpen.addEventListener('click', (e) => {
-      e.preventDefault();
-      privacyOverlay.style.display = 'flex';
-      privacyOverlay.classList.add('show');
-      privacyClose.focus();
-    });
-    privacyClose.addEventListener('click', () => { privacyOverlay.classList.remove('show'); privacyOverlay.style.display='none'; });
-    privacyOverlay.addEventListener('click', (e) => { if (e.target === privacyOverlay) { privacyOverlay.classList.remove('show'); privacyOverlay.style.display='none'; } });
-    document.addEventListener('keydown', (e) => {
-      if (privacyOverlay.classList.contains('show') && e.key === 'Escape') {
-        e.preventDefault();
-        privacyOverlay.classList.remove('show');
-        privacyOverlay.style.display='none';
-      }
-    });
+    // Information dialog
+    const privacyModal = setupModal($('#privacy'));
+    $('#privacy-open').addEventListener('click', (e) => { e.preventDefault(); privacyModal.open($('#privacy-close')); });
+    $('#privacy-close').addEventListener('click', privacyModal.close);
 
     setInterval(updateLastDoseLabels, 60000);
 
     try { render(); } catch(e) { console.error("Initial render failed", e); }
+    if (stateLoadFailed) {
+      showToast('Your saved log could not be read, so the app starts empty. The unreadable copy was kept, not deleted.', 10000);
+    }
 
     // =====================================================================
-    // Welcome-back prompt: the app is meant for one night at a time. If the
-    // newest log entry is older than 12 hours when the app opens, offer a
-    // fresh start. Nothing is deleted without the user choosing it, and
-    // "Start fresh" can be undone from the toast for a few seconds.
+    // Welcome-back prompt for the one-night model. Old logs can be cleared,
+    // with Undo, when the newest entry is over 12 hours old.
     // =====================================================================
     (function setupFreshStart() {
       const STALE_MS = 12 * 60 * 60 * 1000;
@@ -3049,46 +2863,25 @@
       }
       if (!newest || (Date.now() - newest) < STALE_MS) return;
 
-      const overlay = $('#fresh-start');
+      const modal = setupModal($('#fresh-start'));
       const keepBtn = $('#fresh-keep');
-      const clearBtn = $('#fresh-clear');
       $('#fresh-msg').textContent =
         `Your log still has entries from a previous night (last dose ${formatSinceLabel(newest)}). Start fresh, or keep them?`;
 
-      function close() {
-        overlay.classList.remove('show');
-        overlay.style.display = 'none';
-      }
-
-      keepBtn.addEventListener('click', close);
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-      document.addEventListener('keydown', (e) => {
-        if (overlay.classList.contains('show') && e.key === 'Escape') { e.preventDefault(); close(); }
-      });
-      clearBtn.addEventListener('click', () => {
-        const backup = state.entries;
-        state.entries = [];
-        saveState();
-        render();
-        close();
-        showToast('Log cleared — have a good night.', 6000, 'Undo', () => {
-          state.entries = backup;
-          saveState();
-          render();
-        });
+      keepBtn.addEventListener('click', modal.close);
+      $('#fresh-clear').addEventListener('click', () => {
+        modal.close();
+        clearLogWithUndo('Log cleared — have a good night.');
       });
 
-      overlay.style.display = 'flex';
-      overlay.classList.add('show');
-      keepBtn.focus({ preventScroll: true });
+      modal.open(keepBtn);
     })();
 
     // =====================================================================
     // PWA: service worker, iOS install hint, persistent-storage request
     // =====================================================================
 
-    // Register the service worker (./sw.js) — it caches the app so it loads
-    // instantly and works with no internet at all.
+    // Register the service worker for offline loading.
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch((err) => {
@@ -3097,9 +2890,7 @@
       });
     }
 
-    // Ask the browser to protect our saved data from automatic clean-up.
-    // Done on the first tap/click because browsers like the request to come
-    // from a real user interaction. Harmless if unsupported.
+    // Ask the browser to protect saved data from automatic cleanup.
     window.addEventListener('pointerdown', () => {
       if (navigator.storage && navigator.storage.persist) {
         navigator.storage.persist().catch(() => {});
@@ -3123,15 +2914,12 @@
     const isStandalone = navigator.standalone === true ||
                          window.matchMedia('(display-mode: standalone)').matches;
 
-    // Small inline Share icon (square with up-arrow) so people can match
-    // the picture instead of reading
+    // Inline Share icon for install instructions.
     const SHARE_GLYPH = '<svg class="share-glyph" width="15" height="18" viewBox="0 0 18 22" fill="none" aria-hidden="true">' +
       '<path d="M9 1v13M5 5l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<path d="M3 9H2a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
-    // Chrome on Android announces when the app can be installed directly;
-    // we hold on to that so the welcome screen and the banner can offer a
-    // real one-tap Install button instead of written steps.
+    // Android install prompt, reused by the welcome screen and banner.
     let deferredInstallPrompt = null;
 
     // Trigger the browser's own install dialog (Android). Returns true if
@@ -3147,9 +2935,7 @@
       } catch { return false; }
     }
 
-    // Install hint banner: shown whenever the app runs in a browser tab —
-    // never inside the installed app. Dismissing hides it for this visit only,
-    // so it's back the next time they open the site (until they install).
+    // Browser-tab install hint; never shown inside the installed app.
     (function setupInstallHint() {
       const hint = $('#install-hint');
       const msg = $('#install-hint-msg');
@@ -3182,8 +2968,7 @@
     })();
 
     // =====================================================================
-    // Welcome screen: introduces the app on the very first visit and shows
-    // how to install it. Reopen any time from the Information dialog.
+    // Welcome/install screen, reopenable from Information.
     // =====================================================================
 
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -3216,8 +3001,7 @@
       const againBtn = $('#welcome-again');
       const shareArrow = $('#welcome-share-arrow');
 
-      // Show only the install instructions that fit this phone/browser.
-      // They are always unfolded — installing is the main thing we ask for.
+      // Show install instructions tailored to this browser.
       if (isStandalone) {
         // Already installed: confirm it, and show how a friend can get it too
         installTitle.textContent = '✓ Already on your home screen';
@@ -3270,38 +3054,29 @@
         if (deferredInstallPrompt) { installBtn.hidden = false; stepsList.hidden = true; }
       }
 
-      function openWelcome() {
-        overlay.style.display = 'flex';
-        overlay.classList.add('show');
-        // Point at Safari's Share button in the bottom toolbar
-        if (isIOSSafari && !isStandalone) shareArrow.hidden = false;
-        startBtn.focus({ preventScroll: true });
-      }
-      function closeWelcome() {
-        overlay.classList.remove('show');
-        overlay.style.display = 'none';
+      const modal = setupModal(overlay, () => {
         shareArrow.hidden = true;
         try { localStorage.setItem(WELCOME_KEY, '1'); } catch {}
+      });
+      function openWelcome() {
+        // Point at Safari's Share button in the bottom toolbar
+        if (isIOSSafari && !isStandalone) shareArrow.hidden = false;
+        modal.open(startBtn);
       }
 
-      startBtn.addEventListener('click', closeWelcome);
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) closeWelcome(); });
-      document.addEventListener('keydown', (e) => {
-        if (overlay.classList.contains('show') && e.key === 'Escape') { e.preventDefault(); closeWelcome(); }
-      });
+      startBtn.addEventListener('click', modal.close);
 
       // Android: trigger the browser's own install dialog
       installBtn.addEventListener('click', async () => {
         const accepted = await triggerInstallPrompt();
         installBtn.hidden = true;
-        if (accepted) { installSection.hidden = true; closeWelcome(); }
+        if (accepted) { installSection.hidden = true; modal.close(); }
         else stepsList.hidden = false;
       });
 
       // "Show welcome & install guide" inside the Information dialog
       againBtn.addEventListener('click', () => {
-        privacyOverlay.classList.remove('show');
-        privacyOverlay.style.display = 'none';
+        privacyModal.close();
         openWelcome();
       });
 

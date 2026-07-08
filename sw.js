@@ -1,25 +1,14 @@
 /* =============================================================================
-   Service worker for DoseTracker.
+   Service worker for offline loading.
 
-   This file makes the app work offline. The first time the app loads, the
-   browser downloads everything into a local cache. From then on, every load
-   is served from that cache first — instantly, and with no internet needed.
-
-   HOW TO SHIP AN UPDATE:
-   Whenever you change index.html (or any other file), set CACHE_VERSION
-   below to today's date, adding a letter for repeat deploys on the same
-   day ('2026-07-03a' -> '2026-07-03b' -> '2026-07-04a' ...). This is an
-   internal cache label, not a public version number — the only thing that
-   matters is that the string CHANGES on every deploy. Browsers re-read
-   this file on each visit; a changed label creates a fresh cache and
-   deletes the old one, so nobody gets stuck on stale code.
+   Bump CACHE_VERSION for every deployed app change. The label is internal:
+   changing it creates a fresh cache and removes older app caches.
    ============================================================================= */
 
-const CACHE_VERSION = '2026-07-08c';
+const CACHE_VERSION = '2026-07-08d';
 const CACHE_NAME = `med-tracker-${CACHE_VERSION}`;
 
-// Files the app cannot run without. If any of these fail to download,
-// installation is retried on the next visit.
+// Files the app cannot run without.
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -27,8 +16,7 @@ const CORE_ASSETS = [
   './icon.svg'
 ];
 
-// Nice-to-have files (the PNG icons). Cached if available, but their absence
-// must not block installation — e.g. before you've generated them.
+// Nice-to-have icons; missing ones must not block install.
 const OPTIONAL_ASSETS = [
   './icon-192.png',
   './icon-512.png',
@@ -41,7 +29,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       await cache.addAll(CORE_ASSETS);
-      // Optional files are added one by one so a missing icon can't break install
+      // Add optional files one by one so one miss cannot break install.
       await Promise.allSettled(OPTIONAL_ASSETS.map((url) => cache.add(url)));
     }).then(() => self.skipWaiting()) // activate the new version immediately
   );
@@ -69,8 +57,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Navigations (opening or reloading the app) always get index.html,
-  // from cache if possible — this is the offline fallback.
+  // Navigations always fall back to cached index.html.
   if (request.mode === 'navigate') {
     event.respondWith(
       caches.match('./index.html').then(
@@ -80,8 +67,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else (manifest, icons): cache first, then network.
-  // Anything fetched from the network gets stored for next time.
+  // Other same-origin files: cache first, then store successful network hits.
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
