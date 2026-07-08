@@ -1278,7 +1278,7 @@
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
     // Loose match: a preset name appearing as its own word inside the card
-    // name ("Ketamine D", "D's Ketamine") still counts as that preset.
+    // name still counts as that preset.
     // Only whole words count ("Ketamin" or "Keta" match nothing), and if two
     // different preset names appear ("MDMA + Ketamine") it's ambiguous, so
     // nothing matches. TripSit's alias table stays exact-match only.
