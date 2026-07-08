@@ -1146,8 +1146,8 @@
         </div>
         <p class="qr-url">dosetracker.github.io</p>
         <p class="contact-line">Questions or feedback? Contact us at <a href="mailto:dosetracker@proton.me">dosetracker@proton.me</a>.</p>
-        <p class="fine-print">DoseTracker is a logbook, not medical advice.</p>
         <button class="btn btn-ghost" id="welcome-again">Show welcome &amp; install guide</button>
+        <p class="fine-print">DoseTracker is a logbook, not medical advice.</p>
         <p class="version-line">DoseTracker 1.0</p>
       </div>
     </div>
@@ -2871,7 +2871,7 @@
       keepBtn.addEventListener('click', modal.close);
       $('#fresh-clear').addEventListener('click', () => {
         modal.close();
-        clearLogWithUndo('Log cleared — have a good night.');
+        clearLogWithUndo('Log cleared.');
       });
 
       modal.open(keepBtn);
@@ -3031,7 +3031,7 @@
             installNote.hidden = false;
             installNote.textContent = 'Android installs it through your browser.';
             installHint.hidden = false;
-            installHint.innerHTML = '<b>If Android says “Unsafe app” or “older Android version”:</b> that’s a generic Play Protect message shown for every web app — DoseTracker has no account, server, or analytics, and nothing ever leaves your phone. Tap <b>More details → Install anyway</b>. Still blocked? Update <b>Google Play services</b> in the Play Store, or just choose <b>Add to Home screen</b> instead — that always works.';
+            installHint.innerHTML = '<b>If Android says this app is unsafe:</b> that’s a generic Play Protect message shown for every web app — DoseTracker has no account, server, or analytics, and nothing ever leaves your phone. Tap <b>More details → Install anyway</b>. Still blocked? Update <b>Google Play services</b> in the Play Store, or just choose <b>Add to Home screen</b> instead — that always works.';
             steps = ['Tap <b>Install the app</b> if it appears, or tap the <b>⋮ menu</b>',
                      'Choose <b>Install app</b>'];
           } else {
