@@ -1278,7 +1278,7 @@
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
     // Loose match: a preset name appearing as its own word inside the card
-    // name still counts as that preset.
+    // name ("Ketamine D", "D's Ketamine") still counts as that preset.
     // Only whole words count ("Ketamin" or "Keta" match nothing), and if two
     // different preset names appear ("MDMA + Ketamine") it's ambiguous, so
     // nothing matches. TripSit's alias table stays exact-match only.
@@ -1299,8 +1299,10 @@
     }
     // While renaming, preset chips are ranked by how well they fit the typed
     // text: 0 = one starts with the other ("ket" → Ketamine), 1 = typed text
-    // appears inside the name, 3 = unrelated (keeps the original order).
+    // appears inside the name, 2 = a typed word matches a TripSit alias of
+    // the preset ("adam" → MDMA), 3 = unrelated (keeps the original order).
     // The last word is tried too, so "Dave's ket" still pulls Ketamine first.
+    // Alias matches only affect this ordering, never what a name maps to.
     function presetMatchScore(p, typedRaw) {
       const typed = nameKey(typedRaw);
       if (!typed) return 3;
@@ -1311,6 +1313,20 @@
         if (!t) continue;
         if (name.startsWith(t) || t.startsWith(name)) return 0;
         if (name.includes(t)) best = 1;
+      }
+      if (best > 2 && p.ts) {
+        const aliases = PRESET_ALIASES.get(p.ts) || [];
+        for (const w of words) {
+          const wn = normTripsit(w);
+          if (!wn) continue;
+          for (const a of aliases) {
+            // Exact ("coke"), word grown past the alias ("adam's" → "adam"),
+            // or an alias still being typed out ("mol" → "molly")
+            if (wn === a ||
+                (a.length >= 3 && wn.startsWith(a)) ||
+                (wn.length >= 2 && a.startsWith(wn))) return 2;
+          }
+        }
       }
       return best;
     }
@@ -1385,6 +1401,13 @@
       const p = findPresetLoose(name);
       if (p) return p.ts || null;
       return TRIPSIT.names[normTripsit(name)] || null;
+    }
+    // TripSit's aliases grouped per preset ("adam"/"molly" → MDMA), used as
+    // the weaker second signal when ranking the preset chips while typing.
+    const PRESET_ALIASES = new Map(PRESETS.filter(p => p.ts).map(p => [p.ts, []]));
+    for (const [alias, group] of Object.entries(TRIPSIT.names)) {
+      const list = PRESET_ALIASES.get(group);
+      if (list) list.push(alias);
     }
 
     // Inline SVG icons keep rendering consistent and offline.
