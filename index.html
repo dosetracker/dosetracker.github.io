@@ -1277,6 +1277,9 @@
       { name: 'Alcohol',    color: '#ef4444', unit: 'unit', ts: 'alcohol' }
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
+    // Default name for freshly added cards ("New substance", "New substance 2").
+    const DEFAULT_NAME = 'New substance';
+    const isDefaultName = (s) => /^new substance( \d+)?$/.test(nameKey(s));
     // Loose match: a preset name appearing as its own word inside the card
     // name still counts as that preset.
     // Only whole words count ("Ketamin" or "Keta" match nothing), and if two
@@ -1305,7 +1308,10 @@
     // Alias matches only affect this ordering, never what a name maps to.
     function presetMatchScore(p, typedRaw) {
       const typed = nameKey(typedRaw);
-      if (!typed) return 3;
+      // An untouched default name is not real typing — keep the default
+      // chip order ("new" would otherwise hit TripSit's alias "nexus"
+      // and pull 2C-B forward).
+      if (!typed || isDefaultName(typed)) return 3;
       const name = nameKey(p.name);
       const words = typed.split(/\s+/);
       let best = 3;
@@ -2864,7 +2870,7 @@
 
       if (e.target && e.target.id === 'add-med') {
         // Plain "New substance"; only add a number if that one's taken.
-        const base = 'New substance'; const names = new Set(state.drugs.map(d => nameKey(d.name)));
+        const base = DEFAULT_NAME; const names = new Set(state.drugs.map(d => nameKey(d.name)));
         let candidate = base; let i = 1;
         while (names.has(nameKey(candidate))) { i++; candidate = `${base} ${i}`; }
         const color = palette[state.drugs.length % palette.length];
