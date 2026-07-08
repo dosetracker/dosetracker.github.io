@@ -2863,8 +2863,10 @@
       }
 
       if (e.target && e.target.id === 'add-med') {
-        let i = state.drugs.length + 1; let base = 'Drug '; let candidate = base + i; const names = new Set(state.drugs.map(d => nameKey(d.name)));
-        while (names.has(nameKey(candidate))) { i++; candidate = base + i; }
+        // Plain "New substance"; only add a number if that one's taken.
+        const base = 'New substance'; const names = new Set(state.drugs.map(d => nameKey(d.name)));
+        let candidate = base; let i = 1;
+        while (names.has(nameKey(candidate))) { i++; candidate = `${base} ${i}`; }
         const color = palette[state.drugs.length % palette.length];
         const newId = uid('drug');
         state.drugs.push({ id: newId, name: candidate, color, expanded: true });
