@@ -369,10 +369,16 @@
       -webkit-tap-highlight-color: transparent;
     }
     .link-btn:hover { color: var(--muted); }
-    /* Tiny "Change date" option under the time field while editing an entry */
-    .date-link { display: block; font-size: 12.5px; padding: 2px 0; }
+    /* Tiny "Change date" option under a time field (log edits, Taken earlier) */
+    .date-link {
+      display: block; font-size: 12.5px; padding: 2px 0;
+      white-space: nowrap; margin: 2px auto 0;
+    }
     .date-link[hidden] { display: none; }
     .edit-date { margin-top: 6px; }
+    .earlier-box { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+    .earlier-box .date-link { margin: 0 0 0 2px; }
+    input.earlier-date { width: auto; min-height: 36px; padding: 6px 10px; }
     .earlier-edit { display: flex; align-items: center; gap: 8px; }
     .earlier-edit .earlier-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
     input.earlier-time { width: auto; min-height: 36px; padding: 6px 10px; }
@@ -2423,6 +2429,27 @@
         earlierEdit.appendChild(timeInput);
         earlierEdit.appendChild(earlierCancel);
 
+        // Same tiny "Change date" option as in the log's edit row.
+        const earlierDate = document.createElement('input');
+        earlierDate.type = 'date';
+        earlierDate.className = 'earlier-date';
+        earlierDate.setAttribute('aria-label', 'Date taken');
+        earlierDate.hidden = true;
+        const earlierDateLink = document.createElement('button');
+        earlierDateLink.type = 'button';
+        earlierDateLink.className = 'link-btn date-link';
+        earlierDateLink.textContent = 'Change date';
+        earlierDateLink.addEventListener('click', () => {
+          earlierDateLink.hidden = true;
+          earlierDate.hidden = false;
+          try { earlierDate.showPicker?.(); } catch { /* focus is enough */ }
+        });
+        const earlierBox = document.createElement('div');
+        earlierBox.className = 'earlier-box';
+        earlierBox.appendChild(earlierEdit);
+        earlierBox.appendChild(earlierDateLink);
+        earlierBox.appendChild(earlierDate);
+
         const updateAddLabel = () => {
           addBtn.textContent = (earlierActive && timeInput.value) ? `Add at ${timeInput.value}` : 'Add';
         };
@@ -2430,7 +2457,10 @@
           earlierActive = true;
           const now = new Date();
           timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-          earlierWrap.replaceChildren(earlierEdit);
+          earlierDate.value = dayKey(now);
+          earlierDate.hidden = true;
+          earlierDateLink.hidden = false;
+          earlierWrap.replaceChildren(earlierBox);
           updateAddLabel();
         });
         earlierCancel.addEventListener('click', () => {
@@ -2447,13 +2477,23 @@
           const [hh, mm] = timeInput.value.split(':').map(Number);
           if (isNaN(hh) || isNaN(mm)) return undefined;
           const d = new Date();
+          const datePicked = !earlierDate.hidden && earlierDate.value;
+          if (datePicked) {
+            const [y, mo, day] = earlierDate.value.split('-').map(Number);
+            if (!isNaN(y) && !isNaN(mo) && !isNaN(day)) d.setFullYear(y, mo - 1, day);
+          }
           d.setHours(hh, mm, 0, 0);
-          // Later-than-now means yesterday, for nights crossing midnight.
-          if (d > new Date()) d.setDate(d.getDate() - 1);
+          // Later-than-now means yesterday, for nights crossing midnight —
+          // but not when a date was picked on purpose (onAdd rejects that).
+          if (d > new Date() && !datePicked) d.setDate(d.getDate() - 1);
           return d;
         };
 
-        const onAdd = () => addEntryStandard(drug.id, drug.name, numInput, unitSelect, drug.color, undefined, undefined, earlierTs());
+        const onAdd = () => {
+          const ts = earlierTs();
+          if (ts && ts > new Date()) { showToast('That time is in the future.'); return; }
+          addEntryStandard(drug.id, drug.name, numInput, unitSelect, drug.color, undefined, undefined, ts);
+        };
         addBtn.addEventListener('click', (e) => { e.stopPropagation(); onAdd(); });
         numInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } });
         useNumpad(numInput, 'Add', onAdd);
@@ -2849,8 +2889,12 @@
 
       if (numInput) numInput.value = '';
       render();
+      // Mention the day when it isn't today, e.g. a time rolled back to
+      // yesterday because it was later than now.
+      const when = dayKey(ts) === dayKey(new Date())
+        ? timeStr(ts) : `${dateLabel(ts)}, ${timeStr(ts)}`;
       showToast(tsOverride
-        ? `Added ${dosageText} of ${currentDrugName} at ${timeStr(ts)}`
+        ? `Added ${dosageText} of ${currentDrugName} at ${when}`
         : `Added ${dosageText} of ${currentDrugName}`);
     }
 
@@ -2886,6 +2930,12 @@
             newDate.setHours(hh);
             newDate.setMinutes(mm);
         }
+      }
+      // A dose can't lie in the future; the date field is right there
+      // for times that belong to yesterday.
+      if (newDate > new Date()) {
+        showToast('That time is in the future.');
+        return;
       }
 
       e.value = value;
