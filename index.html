@@ -369,6 +369,10 @@
       -webkit-tap-highlight-color: transparent;
     }
     .link-btn:hover { color: var(--muted); }
+    /* Tiny "Change date" option under the time field while editing an entry */
+    .date-link { display: block; font-size: 12.5px; padding: 2px 0; }
+    .date-link[hidden] { display: none; }
+    .edit-date { margin-top: 6px; }
     .earlier-edit { display: flex; align-items: center; gap: 8px; }
     .earlier-edit .earlier-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
     input.earlier-time { width: auto; min-height: 36px; padding: 6px 10px; }
@@ -426,7 +430,7 @@
 
     /* ===== Inputs & selects =====
        (.drug-title is excluded — it's an editable heading, not a form box) */
-    input[type="text"]:not(.drug-title), input[type="time"], select {
+    input[type="text"]:not(.drug-title), input[type="time"], input[type="date"], select {
       width: 100%;
       min-height: var(--control-h);
       padding: 10px 13px;
@@ -1131,7 +1135,7 @@
   <!-- Privacy Modal -->
   <div id="privacy" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="privacy-title" style="display:none;">
     <div class="modal" role="document">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;">
         <h4 id="privacy-title" style="margin:0;">Information</h4>
         <div class="actions">
           <button class="btn btn-ghost" id="privacy-close">Close</button>
@@ -2540,6 +2544,9 @@
           }
           syncInfoBtn(); // ⓘ appears/disappears with the new name
           saveState();
+          // The log's name chips pick up the rename right away — unless an
+          // entry is mid-edit (a redraw would wipe what's typed there).
+          if (!editingId) renderLog();
         });
         // Re-measure after every edit attempt (the value may have reverted)
         nameInput.addEventListener('blur', sizeTitle);
@@ -2583,6 +2590,8 @@
     const repositionOpenMenus = () => { $$('.color-picker.open').forEach(el => el._reposition && el._reposition()); };
     window.addEventListener('scroll', repositionOpenMenus, true);
     window.addEventListener('resize', repositionOpenMenus);
+    // Rotating the phone changes the card width — re-check the label fit
+    window.addEventListener('resize', updateLastDoseLabels);
 
     function renderLog() {
       // One flat, newest-first list for the single-night model.
@@ -2634,6 +2643,28 @@
             dtInput.value = formatAsTime(e.ts);
             dtInput.setAttribute('enterkeyhint', 'done');
 
+            // Doses just before midnight can need yesterday's date, so a
+            // tiny link swaps into a date field. Entries already from
+            // another day show the date field right away.
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.id = `edit-date-${e.id}`;
+            dateInput.className = 'edit-input edit-date';
+            dateInput.value = dayKey(e.ts);
+            dateInput.setAttribute('aria-label', 'Date taken');
+
+            const dateLink = document.createElement('button');
+            dateLink.type = 'button';
+            dateLink.className = 'link-btn date-link';
+            dateLink.textContent = 'Change date';
+            dateLink.addEventListener('click', () => {
+              dateLink.hidden = true;
+              dateInput.hidden = false;
+              try { dateInput.showPicker?.(); } catch { /* focus is enough */ }
+            });
+            if (dayKey(e.ts) === todayKey) dateInput.hidden = true;
+            else dateLink.hidden = true;
+
             const enterSave = (ev) => {
                 if (ev.key === 'Enter' || ev.keyCode === 13) {
                     ev.preventDefault();
@@ -2643,6 +2674,7 @@
             amountInput.addEventListener('keydown', enterSave);
             unitSelect.addEventListener('keydown', enterSave);
             dtInput.addEventListener('keydown', enterSave);
+            dateInput.addEventListener('keydown', enterSave);
 
             const amtWrap = document.createElement('div');
             amtWrap.className = 'edit-amount-grid';
@@ -2650,6 +2682,8 @@
             amtWrap.appendChild(unitSelect);
             tdDose.appendChild(amtWrap);
             tdTimeCell.appendChild(dtInput);
+            tdTimeCell.appendChild(dateLink);
+            tdTimeCell.appendChild(dateInput);
           } else {
             tdDose.textContent = e.dosageText;
             // Older entries (kept past a night) get their date so times
@@ -2747,7 +2781,26 @@
         const el = document.getElementById(`last-${d.id}`);
         if (!el) return;
         el.textContent = formatSinceLabel(lastDoseDate(d.id));
+        fitLastDoseLabel(el);
       });
+    }
+
+    // Shrink the big "since last dose" number just enough that the row with
+    // TOTAL doesn't wrap ("14 h 1 min ago"). Below the smallest step,
+    // wrapping is accepted — that only happens for very long labels.
+    function fitLastDoseLabel(el) {
+      const meta = el.closest('.meta');
+      if (!meta || meta.children.length < 2) return;
+      const left = meta.firstElementChild;
+      const right = meta.lastElementChild;
+      const fitsOneRow = () =>
+        right.getBoundingClientRect().top < left.getBoundingClientRect().bottom - 1 &&
+        el.getBoundingClientRect().height < parseFloat(getComputedStyle(el).fontSize) * 1.6;
+      el.style.fontSize = '';
+      for (const px of [23, 21, 19]) {
+        if (fitsOneRow()) return;
+        el.style.fontSize = px + 'px';
+      }
     }
 
     // --- Actions ---
@@ -2819,8 +2872,14 @@
       }
       const unitRaw = unitEl.value;
 
-      // Handle Time Only Edit (preserve original date)
+      // Start from the original timestamp; the date field (shown on
+      // request) can move the entry to another day, e.g. before midnight.
       let newDate = new Date(e.ts);
+      const dateEl = document.getElementById(`edit-date-${entryId}`);
+      if (dateEl && dateEl.value) {
+        const [y, mo, day] = dateEl.value.split('-').map(Number);
+        if (!isNaN(y) && !isNaN(mo) && !isNaN(day)) newDate.setFullYear(y, mo - 1, day);
+      }
       if (timeEl && timeEl.value) {
         const [hh, mm] = timeEl.value.split(':').map(Number);
         if (!isNaN(hh) && !isNaN(mm)) {
