@@ -1325,29 +1325,75 @@
 
     // Pre-set substances for the quick-pick chips shown while naming a card,
     // ordered by how common they are on a dance floor. Each brings a fitting
-    // signature colour and the unit it is usually measured in. Cocaine and
-    // GHB use two off-palette colours (snow white, watery blue) because the
-    // palette has nothing fitting; every other colour is a palette colour so
-    // the colour menu shows it as selected. Typing one of these names by
-    // hand (any capitalisation) adopts the same colour and unit.
+    // signature colour and the unit it is usually measured in. Since the
+    // 2026-07-08 repaint the stimulants share one white→orange "heat ramp"
+    // (snow → champagne → gold → bronze → orange) and the psychedelics wear
+    // multi-colour blends (see `blend`), so most signature colours now live
+    // off the 10-colour picker palette — the colour menu just shows no
+    // swatch as selected. Typing one of these names by hand (any
+    // capitalisation) adopts the same colour and unit.
     // `ts` is each preset's column on TripSit's combination chart.
     // 3-MMC has none: TripSit deliberately hasn't charted it, and mapping it
     // to mephedrone ourselves would be our judgment, not theirs.
+    // `blend` is a gradient painted over dots and strips at draw time. The
+    // flat `color` underneath is what gets STORED — saved data, the colour
+    // picker and hexToRgba tinting all keep working on a plain hex.
     const PRESETS = [
-      { name: 'MDMA',       color: '#ec4899', unit: 'mg',   ts: 'mdma' },
+      { name: 'MDMA',       color: '#f97316', unit: 'mg',   ts: 'mdma' },
       { name: 'Ketamine',   color: '#3b82f6', unit: 'line', ts: 'ketamine' },
-      { name: 'Speed',      color: '#eab308', unit: 'line', ts: 'amphetamines', wiki: 'Amphetamine' },
-      { name: 'Mephedrone', color: '#10b981', unit: 'line', ts: 'mephedrone' },
-      { name: '3-MMC',      color: '#06b6d4', unit: 'line', ts: null },
-      { name: 'Cocaine',    color: '#e2e8f0', unit: 'line', ts: 'cocaine' },
+      { name: 'Speed',      color: '#facc15', unit: 'line', ts: 'amphetamines', wiki: 'Amphetamine' },
+      { name: 'Mephedrone', color: '#d97706', unit: 'line', ts: 'mephedrone' },
+      { name: '3-MMC',      color: '#fde68a', unit: 'line', ts: null },
+      { name: 'Cocaine',    color: '#f4f6f8', unit: 'line', ts: 'cocaine' },
       { name: 'GHB',        color: '#7dd3fc', unit: 'ml',   ts: 'ghb/gbl' },
-      { name: '2C-B',       color: '#8b5cf6', unit: 'mg',   ts: '2c-x' },
-      { name: 'LSD',        color: '#84cc16', unit: 'µg',   ts: 'lsd' },
-      { name: 'Shrooms',    color: '#f59e0b', unit: 'g',    ts: 'mushrooms', wiki: 'Psilocybin mushrooms' },
+      { name: '2C-B',       color: '#ec4899', unit: 'mg',   ts: '2c-x',
+        blend: { type: 'linear', colors: ['#ec4899', '#818cf8'] } },
+      { name: 'LSD',        color: '#a3e635', unit: 'µg',   ts: 'lsd',
+        blend: { type: 'conic', colors: ['#8b5cf6', '#38bdf8', '#a3e635', '#facc15', '#f472b6'] } },
+      { name: 'Shrooms',    color: '#8b5cf6', unit: 'g',    ts: 'mushrooms', wiki: 'Psilocybin mushrooms',
+        blend: { type: 'linear', colors: ['#8b5cf6', '#2dd4bf'] } },
       { name: 'Weed',       color: '#22c55e', unit: 'g',    ts: 'cannabis', wiki: 'Cannabis' },
       { name: 'Alcohol',    color: '#ef4444', unit: 'unit', ts: 'alcohol' }
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
+    // Signature colours from before the 2026-07-08 repaint, keyed by
+    // nameKey(name). loadState() uses this to move existing cards onto the
+    // new palette — but only cards still wearing the old default; anything
+    // the user picked by hand stays untouched.
+    const OLD_PRESET_COLORS = {
+      'mdma': '#ec4899', 'speed': '#eab308', 'mephedrone': '#10b981',
+      '3-mmc': '#06b6d4', 'cocaine': '#e2e8f0', '2c-b': '#8b5cf6',
+      'lsd': '#84cc16', 'shrooms': '#f59e0b'
+    };
+    // A blend is only worn while the card still has its signature colour —
+    // picking any other colour in the menu switches back to a flat dot.
+    const blendFor = (name, color) => {
+      const p = findPreset(name);
+      return (p && p.blend && color === p.color) ? p.blend : null;
+    };
+    // Round dots get the full swirl (conic) or a diagonal melt; the slim
+    // strip along a card's top edge lays the same colours out left-to-right.
+    const blendDotCss = (b) => b.type === 'conic'
+      ? `conic-gradient(from 210deg, ${b.colors.join(', ')}, ${b.colors[0]})`
+      : `linear-gradient(135deg, ${b.colors.join(', ')})`;
+    const blendStripCss = (b) => `linear-gradient(90deg, ${b.colors.join(', ')})`;
+    // The same blends inside the shared PNG, built as tiny per-dot canvas
+    // gradients. Conic needs a newer engine (Safari 16.2+); anything older
+    // quietly gets the flat base colour instead.
+    function blendCanvasFill(ctx, x, y, r, name, color) {
+      const b = blendFor(name, color);
+      if (!b) return color;
+      if (b.type === 'conic') {
+        if (!ctx.createConicGradient) return color;
+        const g = ctx.createConicGradient(-Math.PI / 2, x, y);
+        b.colors.forEach((c, i) => g.addColorStop(i / b.colors.length, c));
+        g.addColorStop(1, b.colors[0]);
+        return g;
+      }
+      const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+      b.colors.forEach((c, i) => g.addColorStop(i / (b.colors.length - 1), c));
+      return g;
+    }
     // `wiki` is the PsychonautWiki article title where it differs from our
     // chip name (Speed → Amphetamine etc.); absent means same as `name`.
     const presetWikiName = (p) => p.wiki || p.name;
@@ -1371,7 +1417,7 @@
     // stricter column than other opioids — folding it into "Opioids"
     // would soften their warning.
     const COMBO_GROUPS = [
-      ...PRESETS.filter(p => p.ts).map(p => ({ id: p.ts, label: p.name, color: p.color })),
+      ...PRESETS.filter(p => p.ts).map(p => ({ id: p.ts, label: p.name, color: p.color, blend: p.blend })),
       { id: 'benzodiazepines', label: 'Benzos',   color: '#8da2c0' },
       { id: 'opioids',         label: 'Opioids',  color: '#b8a58f' },
       { id: 'tramadol',        label: 'Tramadol', color: '#c9a3a3' },
@@ -1424,6 +1470,13 @@
         delete parsed.history; // history was removed; discard any leftover from older versions
         parsed.drugs.forEach((d, i) => {
           if (!d.color) d.color = palette[i % palette.length];
+          // Follow-along for the 2026-07-08 repaint: a card still wearing a
+          // preset's OLD signature colour moves to the new one. Hand-picked
+          // colours don't match the old defaults, so they stay as they are.
+          if (d.color === OLD_PRESET_COLORS[nameKey(d.name)]) {
+            const p = findPreset(d.name);
+            if (p) d.color = p.color;
+          }
           if (typeof d.expanded === 'undefined') d.expanded = false; // Default to collapsed
         });
         return parsed;
@@ -1518,7 +1571,7 @@
     function openWikiDialog(preset) {
       // "Speed (Amphetamine)" when the article is named differently
       $('#wiki-name').textContent = preset.wiki ? `${preset.name} (${preset.wiki})` : preset.name;
-      $('#wiki-dot').style.background = preset.color;
+      $('#wiki-dot').style.background = preset.blend ? blendDotCss(preset.blend) : preset.color;
       wikiOpenLink.href = presetWikiUrl(preset);
       wikiLastFocused = document.activeElement;
       wikiOverlay.style.display = 'flex';
@@ -1569,7 +1622,7 @@
         chip.setAttribute('aria-pressed', String(sel));
         const dot = document.createElement('span');
         dot.className = 'dot';
-        dot.style.background = g.color;
+        dot.style.background = g.blend ? blendDotCss(g.blend) : g.color;
         chip.appendChild(dot);
         chip.appendChild(document.createTextNode(g.label));
         const tick = document.createElement('span');
@@ -1953,10 +2006,12 @@
 
         for (const e of groups[dk]) {
           const cy = y + ROW_H / 2;
+          const name = lookupDrugName(e.drugId) || e.drugNameAtEntry || 'Drug';
 
-          // Colour dot + drug name (left)
+          // Colour dot + drug name (left) — blended presets keep their
+          // gradient dot even in the exported image
           const dotColor = colorForEntry(e) || '#56c1ab';
-          ctx.fillStyle = dotColor;
+          ctx.fillStyle = blendCanvasFill(ctx, PAD + 5, cy, 5, name, dotColor);
           ctx.beginPath();
           ctx.arc(PAD + 5, cy, 5, 0, Math.PI * 2);
           ctx.fill();
@@ -1976,7 +2031,6 @@
 
           // Name, shortened if it would collide with the dose
           ctx.font = font(600, 14.5);
-          const name = lookupDrugName(e.drugId) || e.drugNameAtEntry || 'Drug';
           const nameMaxW = doseX - ctx.measureText(doseText).width - (PAD + 18) - 12;
           ctx.fillText(ellipsize(ctx, name, Math.max(nameMaxW, 40)), PAD + 18, cy);
 
@@ -2003,7 +2057,7 @@
       for (const t of totalDrugs) {
         const cy = y + ROW_H / 2;
 
-        ctx.fillStyle = t.color;
+        ctx.fillStyle = blendCanvasFill(ctx, PAD + 5, cy, 5, t.name, t.color);
         ctx.beginPath();
         ctx.arc(PAD + 5, cy, 5, 0, Math.PI * 2);
         ctx.fill();
@@ -2065,7 +2119,10 @@
 
         const strip = document.createElement('div');
         strip.className = 'color-strip';
-        strip.style.background = drug.color;
+        // Psychedelic presets wear their blend on the strip and the little
+        // colour button; everything else stays a flat signature colour.
+        const cardBlend = blendFor(drug.name, drug.color);
+        strip.style.background = cardBlend ? blendStripCss(cardBlend) : drug.color;
         card.appendChild(strip);
 
         // Echo the drug's colour on the whole card: a tinted border plus a
@@ -2124,7 +2181,7 @@
             chip.className = 'preset-chip';
             const dot = document.createElement('span');
             dot.className = 'dot';
-            dot.style.background = p.color;
+            dot.style.background = p.blend ? blendDotCss(p.blend) : p.color;
             chip.appendChild(dot);
             chip.appendChild(document.createTextNode(p.name));
             // Keep the title focused on desktop so a click feels seamless
@@ -2255,7 +2312,7 @@
         const colorBtn = document.createElement('button');
         colorBtn.type = 'button';
         colorBtn.className = 'color-dot-btn';
-        colorBtn.style.setProperty('--swatch', drug.color);
+        colorBtn.style.setProperty('--swatch', cardBlend ? blendDotCss(cardBlend) : drug.color);
         const colorName = paletteNames[palette.indexOf(drug.color)] || 'Custom';
         colorBtn.setAttribute('aria-label', `Color: ${colorName}`);
         colorBtn.setAttribute('aria-haspopup', 'listbox');
@@ -2546,8 +2603,8 @@
             drug.color = preset.color;
             drug.lastUnit = preset.unit;
             unitSelect.value = preset.unit;
-            colorBtn.style.setProperty('--swatch', drug.color);
-            strip.style.background = drug.color;
+            colorBtn.style.setProperty('--swatch', preset.blend ? blendDotCss(preset.blend) : drug.color);
+            strip.style.background = preset.blend ? blendStripCss(preset.blend) : drug.color;
             card.style.borderColor = hexToRgba(drug.color, 0.28);
             card.style.background =
               `linear-gradient(180deg, ${hexToRgba(drug.color, 0.06)} 0%, rgba(0,0,0,0) 96px), ` +
