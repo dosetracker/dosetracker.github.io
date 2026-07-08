@@ -1277,6 +1277,43 @@
       { name: 'Alcohol',    color: '#ef4444', unit: 'unit', ts: 'alcohol' }
     ];
     const findPreset = (name) => PRESETS.find(p => nameKey(p.name) === nameKey(name));
+    // Loose match: a preset name appearing as its own word inside the card
+    // name ("Ketamine D", "D's Ketamine") still counts as that preset.
+    // Only whole words count ("Ketamin" or "Keta" match nothing), and if two
+    // different preset names appear ("MDMA + Ketamine") it's ambiguous, so
+    // nothing matches. TripSit's alias table stays exact-match only.
+    const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    function findPresetLoose(name) {
+      const exact = findPreset(name);
+      if (exact) return exact;
+      const hay = nameKey(name);
+      let found = null;
+      for (const p of PRESETS) {
+        const re = new RegExp(`(^|[^a-z0-9])${escapeRe(nameKey(p.name))}([^a-z0-9]|$)`);
+        if (re.test(hay)) {
+          if (found) return null; // two preset words → ambiguous
+          found = p;
+        }
+      }
+      return found;
+    }
+    // While renaming, preset chips are ranked by how well they fit the typed
+    // text: 0 = one starts with the other ("ket" → Ketamine), 1 = typed text
+    // appears inside the name, 3 = unrelated (keeps the original order).
+    // The last word is tried too, so "Dave's ket" still pulls Ketamine first.
+    function presetMatchScore(p, typedRaw) {
+      const typed = nameKey(typedRaw);
+      if (!typed) return 3;
+      const name = nameKey(p.name);
+      const words = typed.split(/\s+/);
+      let best = 3;
+      for (const t of [typed, words[words.length - 1]]) {
+        if (!t) continue;
+        if (name.startsWith(t) || t.startsWith(name)) return 0;
+        if (name.includes(t)) best = 1;
+      }
+      return best;
+    }
     // Old preset defaults used to migrate untouched cards after the repaint.
     const OLD_PRESET_COLORS = {
       'mdma': '#ec4899', 'speed': '#eab308', 'mephedrone': '#10b981',
@@ -1286,7 +1323,7 @@
     // A blend is only worn while the card still has its signature colour —
     // picking any other colour in the menu switches back to a flat dot.
     const blendFor = (name, color) => {
-      const p = findPreset(name);
+      const p = findPresetLoose(name);
       return (p && p.blend && color === p.color) ? p.blend : null;
     };
     // Dots use the full blend; card strips lay it out left-to-right.
@@ -1345,7 +1382,7 @@
     // Which chart column a logged name belongs to, if any: presets know
     // theirs; everything else goes through TripSit's own alias table.
     function tripsitGroupFor(name) {
-      const p = findPreset(name);
+      const p = findPresetLoose(name);
       if (p) return p.ts || null;
       return TRIPSIT.names[normTripsit(name)] || null;
     }
@@ -2074,7 +2111,10 @@
           clearTimeout(presetHideTimer);
           presetRow.innerHTML = '';
           const taken = new Set(state.drugs.filter(d => d.id !== drug.id).map(d => nameKey(d.name)));
-          for (const p of PRESETS) {
+          // Closest match first while typing ("ket…" pulls Ketamine forward)
+          const ranked = [...PRESETS].sort((a, b) =>
+            presetMatchScore(a, nameInput.value) - presetMatchScore(b, nameInput.value));
+          for (const p of ranked) {
             if (taken.has(nameKey(p.name))) continue;
             const chip = document.createElement('button');
             chip.type = 'button';
@@ -2105,6 +2145,7 @@
             presetRow.appendChild(chip);
           }
           presetRow.classList.add('show');
+          presetRow.scrollLeft = 0; // best match must be in view
         };
 
         // Focus synchronously so iOS opens the keyboard.
@@ -2118,18 +2159,18 @@
         const renameBtn = iconBtn('icon-btn title-edit-btn', 'Rename', `Rename ${drug.name}`, ICONS.pencil);
         renameBtn.addEventListener('click', (e) => { e.stopPropagation(); startTitleEdit(); });
 
-        // Preset-only info; free-typed names get no external mapping.
+        // Preset info; a preset word inside the name ("Ketamine D") counts too.
         const infoBtn = iconBtn('icon-btn info-btn', 'Substance info', null, ICONS.info);
         infoBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const p = findPreset(drug.name);
+          const p = findPresetLoose(drug.name);
           if (p) openWikiDialog(p);
         });
         // Shown/hidden in place so a rename (which doesn't re-render) updates it
         const syncInfoBtn = () => {
-          const p = findPreset(drug.name);
+          const p = findPresetLoose(drug.name);
           infoBtn.style.display = p ? '' : 'none';
-          if (p) infoBtn.setAttribute('aria-label', `About ${drug.name} on PsychonautWiki`);
+          if (p) infoBtn.setAttribute('aria-label', `About ${p.name} on PsychonautWiki`);
         };
         syncInfoBtn();
 
@@ -2404,6 +2445,8 @@
         });
         nameInput.addEventListener('input', () => {
           const proposed = nameInput.value.trim();
+          // Re-rank the preset chips as the name grows
+          if (nameInput.classList.contains('editing')) showPresets();
           const dup = state.drugs.some(d => d.id !== drug.id && nameKey(d.name) === nameKey(proposed));
           if (dup) { nameInput.classList.add('invalid'); nameErr.style.display = 'block'; }
           else { nameInput.classList.remove('invalid'); nameErr.style.display = 'none'; }
@@ -2422,8 +2465,8 @@
             autoUnit = 'g';
           }
 
-          // An exact pre-set name knows its unit best
-          const typedPreset = findPreset(proposed);
+          // A recognized pre-set name knows its unit best
+          const typedPreset = findPresetLoose(proposed);
           if (typedPreset) autoUnit = typedPreset.unit;
 
           if (autoUnit) {
@@ -2447,11 +2490,15 @@
           }
           drug.name = proposed;
           renameBtn.setAttribute('aria-label', `Rename ${drug.name}`);
-          // Known preset typed by hand: adopt spelling, colour and unit in place.
-          const preset = findPreset(proposed);
+          // Known preset typed by hand — exactly, or as a word inside the
+          // name ("Ketamine D"): adopt colour and unit in place. Spelling is
+          // only corrected when nothing else was typed around it.
+          const preset = findPresetLoose(proposed);
           if (preset) {
-            drug.name = preset.name;
-            nameInput.value = preset.name;
+            if (findPreset(proposed)) {
+              drug.name = preset.name;
+              nameInput.value = preset.name;
+            }
             drug.color = preset.color;
             drug.lastUnit = preset.unit;
             unitSelect.value = preset.unit;
