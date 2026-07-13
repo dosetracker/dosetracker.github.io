@@ -887,6 +887,20 @@
     body.numpad-open .container { padding-bottom: 440px; }
 
     /* ===== iOS install hint banner ===== */
+    /* Migration notice: DoseTracker moved to doselog.github.io (2026-07). */
+    .moved-note {
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin: -6px 0 20px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .moved-note b { color: var(--text); }
+    .moved-note a { color: var(--accent-strong); font-weight: 600; }
+
     .install-hint {
       position: fixed; left: 50%; transform: translateX(-50%);
       bottom: calc(76px + var(--safe-bottom));
@@ -972,6 +986,13 @@
         <p>Track doses and timing easily on any device.</p>
       </div>
     </header>
+
+    <div class="moved-note" role="note">
+      <b>DoseTracker has moved.</b> The app now lives at
+      <a href="https://doselog.github.io/">doselog.github.io</a> under the name DoseLog.
+      This page keeps working and your log stays saved here, but it is no longer
+      actively maintained — new features appear only at the new address.
+    </div>
 
     <div class="toolbar">
       <div class="toolbar-group">

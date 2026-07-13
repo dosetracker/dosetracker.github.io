@@ -12,6 +12,12 @@
   <strong><a href="https://dosetracker.github.io">dosetracker.github.io</a></strong>
 </p>
 
+> [!IMPORTANT]
+> **DoseTracker has moved.** The app is now called **DoseLog** and lives at
+> **[doselog.github.io](https://doselog.github.io/)**. This site stays online for
+> existing users (your log is saved on your device, tied to this address), but it
+> is no longer actively maintained — all updates happen at the new address.
+
 ---
 
 ## What it does
